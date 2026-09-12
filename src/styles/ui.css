@@ -1,0 +1,482 @@
+/*
+ * Styles for UI components shared across contexts (Modal / forms / segmented control / Toast).
+ *
+ * app.html imports it directly; the content script's shadow root takes it through `?inline`
+ * and injects the string into a <style>. So document-root-only selectors (`:root`, `html`,
+ * `body`) must not appear here -- theme variables only reach this file through var(--x),
+ * which theme.css provides once the shadow rewriter has swapped its selector.
+ */
+
+/* ---- Overlays ---- */
+
+/* Backdrop: fills the viewport; when the content is taller than the viewport the whole backdrop scrolls. */
+.mc-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 5vh 16px 16px;
+  background: rgb(0 0 0 / 58%);
+  overflow: auto;
+}
+
+/* The main panel that carries the text: it must be opaque.
+   Both var() calls here have a literal fallback -- if the theme variables were never
+   injected (this stylesheet gets moved into shadow DOM, and the injection chain has broken
+   before), the worst case is wrong colours, not an unreadable "transparent panel with
+   black text". */
+.mc-modal__panel {
+  width: 100%;
+  max-width: 600px;
+  /* Once the font size goes up the whole thing easily grows taller than the viewport --
+     cap the panel itself and scroll only the middle column, so the title and "Add/Cancel"
+     stay visible and the backdrop never needs scrolling. */
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  border: 1px solid var(--border, #343944);
+  border-radius: var(--radius);
+  background: var(--bg-surface, #1e2128);
+  color: var(--text, #eef1f6);
+  font-family: var(--font, Inter, 'Segoe UI', system-ui, sans-serif);
+  box-shadow: 0 18px 48px rgb(0 0 0 / 55%);
+}
+
+/* Overlay header: title + close button, with a divider along the bottom. Does not scroll. */
+.mc-modal__head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Overlay title. The margin h2 comes with is useless here, so reset it to zero. */
+.mc-modal__title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* The × in the top right: no border and no background, it speaks through its text colour alone. */
+.mc-modal__close {
+  margin-left: auto;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 22px;
+  line-height: 1;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.mc-modal__close:hover {
+  color: var(--text);
+  background: var(--bg-surface-2);
+}
+
+/* Overlay body: only this part scrolls, header and footer stay put. */
+.mc-modal__body {
+  flex: 1 1 auto;
+  min-height: 0; /* without it, a flex child does not really shrink and overflow has no effect */
+  overflow-y: auto;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* Overlay footer: the button row, mirroring the header. Does not scroll. */
+.mc-modal__foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 22px;
+  border-top: 1px solid var(--border);
+}
+
+/* Pushes the buttons after it to the right. */
+.mc-modal__foot .mc-spacer {
+  margin-left: auto;
+}
+
+/* ---- Form fields ---- */
+
+/* One field: label + input + hint, stacked vertically. */
+.mc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Field label. The weight sits between semibold and bold: heavier than the text in the input, lighter than a heading. */
+.mc-field__label {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--text-muted);
+}
+
+/* The supporting hint under a field, one step smaller than the label. */
+.mc-field__hint {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* Text input. The background is the page colour rather than the card colour, so it looks recessed. */
+.mc-input,
+.mc-textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-page, #16181d);
+  color: var(--text, #eef1f6);
+  font: inherit;
+  font-size: var(--font-size-base, 16px);
+  padding: 10px 12px;
+}
+
+/* Textarea: vertical resize only; horizontal would fight with the overlay width. */
+.mc-textarea {
+  min-height: 120px;
+  resize: vertical;
+  line-height: 1.55;
+}
+
+/* On focus the border turns accent; the outer focus ring comes from theme.css. */
+.mc-input:focus,
+.mc-textarea:focus {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+}
+
+/* ---- Segmented control (scope / source / import mode) ---- */
+
+/* Several options joined into one control: a border around the outside, separated by left borders inside. */
+.mc-seg {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  align-self: flex-start;
+}
+
+/* A single option. The selected state is the --on modifier below. */
+.mc-seg__opt {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 9px 18px;
+  cursor: pointer;
+}
+
+/* The divider between options is only on the left, so they read as one control rather than a row of buttons. */
+.mc-seg__opt + .mc-seg__opt {
+  border-left: 1px solid var(--border);
+}
+
+/* Hover only hints that it is clickable. */
+.mc-seg__opt:hover {
+  color: var(--text);
+  background: var(--bg-surface-2);
+}
+
+/* Selected option: fully filled with the accent, unchanged on hover. */
+.mc-seg__opt--on,
+.mc-seg__opt--on:hover {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* Note for the auto-detected values (source from the author / scope from the position in
+   the discussion). Deliberately very light: it only tells the user "I picked this value
+   for you", it is not a call to action, so it is dimmed towards the background colour and
+   does not compete with the body text for attention.
+   Both var() calls have a literal fallback -- this stylesheet gets moved into shadow DOM,
+   and if the theme variables were never injected, a broken color-mix would let the colour
+   fall back to the inherited value (bright) and become the loudest line on the page. */
+.mc-rec {
+  font-size: 13px;
+  color: color-mix(in srgb, var(--text-muted, #9aa2b2) 68%, var(--bg-surface, #1e2128));
+}
+
+/* ---- Link rows ---- */
+
+/* One example link row: index + input + author + delete button. */
+.mc-linkrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Row index. tabular-nums makes 1 and 10 the same width, otherwise the column of numbers looks ragged. */
+.mc-linkrow__idx {
+  flex: none;
+  width: 22px;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* With the extra "author" cell in the row, the input has to be allowed to shrink
+   (the default flex-basis of width:100% would push the author out of the container).
+   min-width:0 leaves room for the ellipsis on long URLs. */
+.mc-linkrow .mc-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* The post author parsed out of a link (CODING_PLAN §8.4).
+   Same tone as .mc-rec: this is extra information, not a notice the user has to act on,
+   so it is dimmed towards the background colour.
+   Both var() calls have a literal fallback -- this stylesheet gets moved into shadow DOM,
+   and if the theme variables were never injected, a broken color-mix would let the colour
+   fall back to the inherited value (bright) and become the loudest line on the page. */
+.mc-linkrow__author {
+  flex: none;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--text-muted, #9aa2b2);
+}
+
+/* The dim state while the author name is being read or could not be read ("读取作者…" / "未识别作者"). */
+.mc-linkrow__author--dim {
+  color: color-mix(in srgb, var(--text-muted, #9aa2b2) 55%, var(--bg-page, #16181d));
+}
+
+/* Icon button: a symbol with no text, neutral colour; hover turns it into the danger colour (currently only used for "删除链接"). */
+.mc-iconbtn {
+  flex: none;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1;
+  padding: 9px 11px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.mc-iconbtn:hover {
+  border-color: color-mix(in srgb, var(--danger) 60%, var(--border));
+  color: var(--danger);
+}
+
+/* ---- Alerts ---- */
+
+/* Alert when something goes wrong: faint red fill + red border, with the body text in the normal colour. */
+.mc-alert {
+  border: 1px solid color-mix(in srgb, var(--danger) 50%, var(--border));
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  padding: 11px 13px;
+  font-size: 14px;
+}
+
+/* The bold words inside an alert use the danger colour, standing out more than the body text. */
+.mc-alert strong {
+  color: var(--danger);
+}
+
+/* ---- Toast ---- */
+
+/* Toast container: centred against the bottom of the viewport. It takes no mouse events so it does not block the buttons underneath. */
+.mc-toasts {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 2147483100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+
+/* The two live regions (polite / assertive) stay in the DOM and must take up no space at
+   all when empty: an outer gap would also leave a gap between the two empty boxes and
+   push the toasts off centre, so the gap moved inside each region. */
+.mc-toasts__region {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.mc-toasts__region:not(:empty) + .mc-toasts__region:not(:empty) {
+  margin-top: 8px;
+}
+
+/* One toast: pill-shaped, success and failure told apart by border and text colour, with the shape unchanged. */
+.mc-toast {
+  border: 1px solid var(--border, #343944);
+  border-radius: 999px;
+  background: var(--bg-surface-2, #262a33);
+  color: var(--text, #eef1f6);
+  font-family: var(--font, Inter, 'Segoe UI', system-ui, sans-serif);
+  font-size: 15px;
+  padding: 10px 20px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 40%);
+}
+
+.mc-toast--ok {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  color: var(--accent);
+}
+
+.mc-toast--error {
+  border-color: color-mix(in srgb, var(--danger) 55%, transparent);
+  color: var(--danger);
+}
+
+/* ---- Sync settings panel (Settings page) ---- */
+
+/* One block in the panel. The top margin here is what separates one block from the next. */
+.sync__block {
+  margin-top: 14px;
+}
+
+/* Username / password side by side; collapses to one column on narrow screens, using the same breakpoint logic as the checklist's two-column layout. */
+.sync__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+@media (max-width: 720px) {
+  .sync__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* One row: a control + its hint text, vertically centred. */
+.sync__row {
+  align-items: center;
+  margin-top: 12px;
+}
+
+/*
+ * The result of the three actions (`SyncResult`). Empty by default, but it occupies one row
+ * of height.
+ *
+ * When a result appears it should not push the toggles and conflict strategy below it down
+ * as a block -- one click and the page jumps, which looks like a misclick; and the user has
+ * probably switched to another window during those few seconds of waiting, so a page that
+ * moved while they were away is harder to recognise. So this row is reserved rather than
+ * "growing" when there is a result.
+ *
+ * The height is calculated from the line height of `.ok-text` / `.error-text`:
+ * 14px × 1.5 = 21px. The `margin: 8px 0 0` those two sentences carry has to be reset to
+ * zero here -- spacing comes from this box, otherwise the height differs by 8px between the
+ * empty and filled states.
+ */
+.sync__result {
+  min-height: 21px;
+  margin-top: 10px;
+}
+
+.sync__result > .ok-text,
+.sync__result > .error-text {
+  margin: 0;
+}
+
+/* The select sizes to its content instead of stretching like the inputs; the lower bound keeps short options from squeezing into a sliver. */
+.sync__select {
+  width: auto;
+  min-width: 190px;
+}
+
+/* Warning about storing the password in plain text: a neutral notice colour, not the error colour -- it is a heads-up, not a failure. */
+.sync__warn {
+  margin-top: 14px;
+  border-left: 3px solid color-mix(in srgb, var(--accent) 50%, var(--border));
+  padding: 2px 0 2px 10px;
+}
+
+/* The conflict section (both timestamps, the reason, the action buttons). */
+.sync__conflict {
+  margin-top: 14px;
+}
+
+/* Paragraph of conflict explanation: space above and below, separating it from the buttons. */
+.sync__conflict p {
+  margin: 6px 0 10px;
+}
+
+/* Toggles like "自动上传 / 打开时拉取": the whole row is clickable. */
+.sync__check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+/* The checkbox itself is bumped to 16px, with the cursor to match (clicking the empty space beside it counts too). */
+.sync__check input {
+  accent-color: var(--accent);
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+/* ---- OAuth provider cards ---- */
+
+/* With all four stacked, a top border groups them; the cards themselves get no extra border, avoiding a box inside a box. */
+.sync__provider {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+/* The sub-heading inside a card, often followed by a status badge; baseline alignment keeps them from sitting at different heights. */
+.panel__subtitle {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* "● 已连接 / ○ 未连接". The dots are drawn with characters, so only the text colour needs adjusting. */
+.sync__badge {
+  font-size: 12px;
+  font-weight: 400;
+}
+
+/* The numbered steps of the registration wizard. */
+.sync__steps {
+  margin: 8px 0 10px;
+  padding-left: 20px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+/* The step numbers (1. 2. 3.) use the accent colour, matching the emphasis elsewhere. */
+.sync__steps li::marker {
+  color: var(--accent);
+}
+
+/* Redirect URL: read-only, but it has to be selectable for copying -- it is the only thing in this configuration that gets moved around by hand. */
+.sync__readonly {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  color: var(--text);
+}

@@ -1,0 +1,196 @@
+/*
+ * osu! Modding Checklist -- theme tokens (dark grey + #AEFF7E Ithaca green)
+ *
+ * Shared by the extension pages (popup / app) and the content script's overlay (CODING_PLAN
+ * §4); shadow DOM keeps them from leaking into the osu page.
+ *
+ * ⚠️ content/index.tsx moves this file into the shadow root by rewriting the selector block
+ *    below, so do not write that selector in a comment -- the rewrite would hit the comment
+ *    instead of the real rule.
+ */
+:root {
+  --bg-page: #16181d;          /* page background; also the recessed input fill */
+  --bg-surface: #1e2128;       /* cards / inputs */
+  --bg-surface-2: #262a33;     /* hover / inset */
+  --border: #343944;           /* dividers, control borders */
+  --text: #eef1f6;             /* body text */
+  --text-muted: #9aa2b2;       /* secondary text: hints, status, placeholders */
+  --accent: #aeff7e;           /* Ithaca green = the main highlight colour */
+  --accent-hover: #c3ffa0;     /* hover state of the accent, one step brighter */
+  --accent-ink: #10150c;       /* dark text used on top of accent */
+  --danger: #ff7a90;           /* errors, dangerous actions */
+  --radius: 10px;              /* corner radius for panels and overlays */
+  --radius-sm: 6px;            /* small things like buttons and inputs */
+  /* UI font. System fonts only, falling back in order; no webfont bundled with the extension. */
+  --font: Inter, 'Segoe UI', system-ui, -apple-system, sans-serif;
+  /* Base font size: the body text on an osu discussion page is 15px, so this is 16px, one
+     step up. Pages apply it on body; there is no body in shadow DOM, so content/index.tsx
+     applies it to :host explicitly. */
+  --font-size-base: 16px;
+}
+
+/* padding and border no longer add to the width; the width:100% layouts below rely on it. */
+* {
+  box-sizing: border-box;
+}
+
+/* The extension pages fill the window themselves; drop the browser's default margins. */
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+/* Default typography for the extension pages. There is no body in shadow DOM; that baseline is added in content/index.tsx. */
+body {
+  background: var(--bg-page);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: var(--font-size-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Links all use the accent colour with no underline (hover switches to the brighter step). */
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--accent-hover);
+}
+
+/* Selection uses a faded accent instead of the system blue. */
+::selection {
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+/* Shared focus ring (focus is not expressed by colour alone) */
+:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  outline-offset: 1px;
+}
+
+/* ---- Basic controls shared across pages ---- */
+
+/* Generic button. The font size is hard-coded at 15px rather than following
+   --font-size-base -- a control looks like a control when it is one step smaller than the body text. */
+.btn {
+  border: 1px solid var(--border);
+  background: var(--bg-surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.btn:hover {
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+}
+
+/* Primary action button: outlined with a faint fill normally, fully filled with the accent on hover. */
+.btn--accent {
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+}
+
+.btn--accent:hover {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* A smaller button. Only for secondary entry points like the "add" inside an empty
+   section: it is the same action as the "＋" to the right of the section title, and that
+   one is the primary entry point -- one size down keeps the eye from reading this as the
+   page's main button. */
+.btn--sm {
+  font-size: 13px;
+  font-weight: 500;
+  padding: 4px 10px;
+}
+
+/* Dangerous action button (delete and the like). The dark text on hover goes with the danger background and does not follow --accent-ink. */
+.btn--danger {
+  border-color: color-mix(in srgb, var(--danger) 55%, transparent);
+  color: var(--danger);
+}
+
+.btn--danger:hover {
+  background: var(--danger);
+  color: #1b0d11;
+}
+
+/* Secondary text (hints, status lines): the class form of --text-muted. */
+.muted {
+  color: var(--text-muted);
+}
+
+/* Monospace text: things compared character by character, like device ids and redirect URLs. */
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 14px;
+}
+
+/* Success line (e.g. "连接正常"). */
+.ok-text {
+  color: var(--accent);
+  font-size: 14px;
+  margin: 8px 0 0;
+}
+
+.error-text {
+  color: var(--danger);
+  font-size: 14px;
+  margin: 8px 0 0;
+  /* The notice when OAuth cannot connect is multi-line (the authorization URL plus a
+     list of config errors, one per line), and a different provider means a different
+     list. Without preserving newlines it collapses into one unreadable paragraph. */
+  white-space: pre-wrap;
+}
+
+/* Screen readers only: shrunk to 1px so it takes no layout space, and display:none is not an option (screen readers would not read it). */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Segmented control (e.g. import mode) */
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+/* One option. Spacing and font size are one step down from .btn, since several options have to fit on one line. */
+.seg__opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+/* The radio/checkbox inside: the accent colour follows the theme, and the default margin would throw the layout off here. */
+.seg__opt input {
+  accent-color: var(--accent);
+  margin: 0;
+}
+
+/* The selected one: faint fill + accent text, told apart by colour rather than a border change. */
+.seg__opt--on {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+}

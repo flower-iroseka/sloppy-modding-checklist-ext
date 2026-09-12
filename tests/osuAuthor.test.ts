@@ -1,0 +1,389 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  authorForPost,
+  clearAuthorCache,
+  parseAuthorLink,
+  parseBeatmapsetPayload,
+  parseForumPostAuthors,
+  parseOsuDiscussionLink,
+  parseOsuForumPostLink,
+  resolveLinkAuthor,
+} from '../src/core/osuAuthor';
+
+/**
+ * Link -> author: parsing osu discussion permalinks and forum post links, pulling the
+ * author out of the page HTML, and the cached resolveLinkAuthor on top of both.
+ *
+ * The HTML fixtures keep the real site's anchor structure and cut the body text down to
+ * what the parsers read. The "can't tell which post this is" paths are checked as hard
+ * as the happy ones, because guessing an author is worse than returning none.
+ */
+
+/**
+ * Build a discussion page HTML with the post data embedded in that script tag.
+ *
+ * The shape follows the real site (measured 2026-09, excerpted from beatmapset 2608353):
+ * posts aren't in DOM class names (that part is React client-rendered), they're stuffed
+ * whole into `<script id="json-beatmapset">`.
+ *
+ * @param payload the beatmapset JSON to embed, passed through JSON.stringify; when undefined the script contains the literal "undefined"
+ * @returns a full page of HTML
+ */
+function pageWith(payload: unknown): string {
+  return `<!DOCTYPE html><html><head>
+    <script id="json-current-user" type="application/json">null</script>
+    <script id="json-beatmapset" type="application/json">${JSON.stringify(payload)}</script>
+  </head><body><div class="js-react" data-react="beatmap-discussions"></div></body></html>`;
+}
+
+/** An excerpt of the real payload: two discussions, three posts, the author alternating between two users. */
+const REAL_PAYLOAD = {
+  id: 2608353,
+  creator: 'Daycore',
+  user_id: 5596337,
+  related_users: [
+    { id: 5596337, username: 'Daycore' },
+    { id: 8266817, username: 'Spectator' },
+  ],
+  discussions: [
+    {
+      id: 5752323,
+      user_id: 5596337,
+      message_type: 'hype',
+      posts: [
+        { id: 15116795, user_id: 5596337, message: '4562' },
+        { id: 15116798, user_id: 8266817, message: 'kudosu' },
+      ],
+    },
+    {
+      id: 5732909,
+      user_id: 8266817,
+      message_type: 'hype',
+      posts: [{ id: 15110000, user_id: 8266817, message: 'hi' }],
+    },
+  ],
+};
+
+describe('osu discussion permalink 解析', () => {
+  it('取出 beatmapset / 难度 / post id', () => {
+    expect(
+      parseOsuDiscussionLink('https://osu.ppy.sh/beatmapsets/2542025/discussion/5841469/timeline#/5762228'),
+    ).toEqual({ beatmapsetId: 2542025, beatmapId: 5841469, postId: 5762228 });
+  });
+
+  it('generalAll 这类整图页没有难度（`-` 占位）', () => {
+    expect(parseOsuDiscussionLink('https://osu.ppy.sh/beatmapsets/2542025/discussion/-/generalAll')).toEqual(
+      { beatmapsetId: 2542025 },
+    );
+  });
+
+  it('带 hash 的permalink 能拿到 post id', () => {
+    const ref = parseOsuDiscussionLink(
+      'https://osu.ppy.sh/beatmapsets/2608353/discussion/-/generalAll#/5752323',
+    );
+    expect(ref?.beatmapsetId).toBe(2608353);
+    expect(ref?.postId).toBe(5752323);
+  });
+
+  it('praises 这类子路径不影响解析', () => {
+    expect(
+      parseOsuDiscussionLink('https://osu.ppy.sh/beatmapsets/2608353/discussion/-/generalAll/praises#/5752323')
+        ?.postId,
+    ).toBe(5752323);
+  });
+
+  it('非 osu discussion 链接一律 undefined —— 这就是「不该去猜作者」的那批', () => {
+    expect(parseOsuDiscussionLink('https://docs.google.com/document/d/abc')).toBeUndefined();
+    expect(parseOsuDiscussionLink('https://i.imgur.com/abc.png')).toBeUndefined();
+    expect(parseOsuDiscussionLink('https://osu.ppy.sh/users/5596337')).toBeUndefined();
+    expect(parseOsuDiscussionLink('https://osu.ppy.sh/beatmapsets/2608353')).toBeUndefined();
+    expect(parseOsuDiscussionLink('https://example.com/beatmapsets/1/discussion/-/generalAll')).toBeUndefined();
+    expect(parseOsuDiscussionLink('随手写的一行字')).toBeUndefined();
+    expect(parseOsuDiscussionLink('')).toBeUndefined();
+  });
+});
+
+describe('从讨论页 HTML 里抽「帖子 → 作者」', () => {
+  it('按 related_users 把 user_id 翻成用户名', () => {
+    const payload = parseBeatmapsetPayload(pageWith(REAL_PAYLOAD));
+    expect(payload).toBeDefined();
+    expect(payload!.discussionAuthors.get(5752323)).toBe(5596337);
+    expect(payload!.postAuthors.get(15116798)).toBe(8266817);
+    expect(payload!.usernames.get(5596337)).toBe('Daycore');
+  });
+
+  it('discussion id 和 post id 两种 permalink 都能解析出作者', () => {
+    const payload = parseBeatmapsetPayload(pageWith(REAL_PAYLOAD))!;
+    // The hash points at the discussion thread itself (what the site does now)
+    expect(authorForPost(payload, 5752323)).toEqual({ username: 'Daycore', id: 5596337 });
+    // The hash points at one reply inside the discussion thread
+    expect(authorForPost(payload, 15116798)).toEqual({ username: 'Spectator', id: 8266817 });
+  });
+
+  it('找不到那个 id 时返回 undefined，不返回「第一个作者」凑数', () => {
+    const payload = parseBeatmapsetPayload(pageWith(REAL_PAYLOAD))!;
+    expect(authorForPost(payload, 999999)).toBeUndefined();
+  });
+
+  it('user_id 在表里查不到用户名时也返回 undefined', () => {
+    const payload = parseBeatmapsetPayload(
+      pageWith({ related_users: [], discussions: [{ id: 1, user_id: 42, posts: [] }] }),
+    )!;
+    expect(authorForPost(payload, 1)).toBeUndefined();
+  });
+
+  it('页面里没有 json-beatmapset（站点改版 / 不是讨论页）→ undefined，且不抛错', () => {
+    expect(parseBeatmapsetPayload('<html><body>换个页面</body></html>')).toBeUndefined();
+    expect(parseBeatmapsetPayload(pageWith(undefined))).toBeUndefined();
+  });
+
+  it('<script> 里不是合法 JSON 时也只是 undefined', () => {
+    expect(
+      parseBeatmapsetPayload('<script id="json-beatmapset">{ 这不是 json </script>'),
+    ).toBeUndefined();
+  });
+
+  it('缺字段的脏数据不会让解析炸掉', () => {
+    const payload = parseBeatmapsetPayload(
+      pageWith({ discussions: [{ id: 'x' }, null, { id: 5, user_id: 7, posts: [{ id: null }] }] }),
+    );
+    expect(payload).toBeDefined();
+    expect(payload!.discussionAuthors.size).toBe(1);
+  });
+});
+
+/**
+ * Build a forum topic page HTML.
+ *
+ * The shape follows the real site (measured 2026-09, excerpted from topic 2216866):
+ * the forum and the discussion page aren't the same thing, and this one is server-rendered
+ * DOM, aligned item by item using three anchors: `data-post-id`, `forum-post__user` and
+ * `js-post-url`. The real page has 15 posts; below only the anchor structure is kept and
+ * the body text is truncated.
+ *
+ * @param posts the post blocks built by forumPost(), joined into the body in order
+ * @returns a full page of HTML
+ */
+function forumPage(...posts: string[]): string {
+  return `<!DOCTYPE html><html><head>
+    <script id="json-current-user" type="application/json">null</script>
+    <script id="json-route-section" type="application/json">{"section":"forum"}</script>
+  </head><body>
+    ${posts.join('\n')}
+  </body></html>`;
+}
+
+/**
+ * Build the HTML for one forum post block.
+ *
+ * @param opts.postId the post's data-post-id, which is the key the parse result is looked up by
+ * @param opts.username the username, going into both data-post-username and the author anchor; omit it and data-post-username isn't written
+ * @param opts.userId the author's user id, defaulting to 0
+ * @param opts.body the post body, defaulting to "正文"
+ * @returns the post block HTML
+ */
+function forumPost(opts: {
+  postId: number;
+  username?: string;
+  userId?: number;
+  body?: string;
+}): string {
+  const head = `<div
+    class="js-forum-post  forum-post"
+    data-post-id="${opts.postId}"${opts.username === undefined ? '' : `
+    data-post-username="${opts.username}"`}
+    data-post-position="1"
+>
+    <div class="forum-post__body">
+        <div class="forum-post__content forum-post__content--header">
+            <div class="forum-post__header-content">
+                <div class="forum-post__header-content-item">
+                    <a class='forum-post__user js-usercard' data-user-id='${opts.userId ?? 0}' href='https://osu.ppy.sh/users/${opts.userId ?? 0}' style=''>${opts.username ?? ''}</a>
+                    <a class="js-post-url" rel="nofollow" href="https://osu.ppy.sh/community/forums/posts/${opts.postId}">`;
+  return `${head}<div class="forum-post__content forum-post__content--main">${opts.body ?? '正文'}</div></div></div></div>`;
+}
+
+describe('osu 论坛链接解析（parseOsuForumPostLink）', () => {
+  it('帖子永久链接取出 post id', () => {
+    expect(parseOsuForumPostLink('https://osu.ppy.sh/community/forums/posts/10229745')).toEqual({
+      postId: 10229745,
+    });
+  });
+
+  it('带 ?start=<postId> 的 topic 链接也能定位（实测站点就是这么跳帖的）', () => {
+    expect(
+      parseOsuForumPostLink('https://osu.ppy.sh/community/forums/topics/2216866?start=10229668'),
+    ).toEqual({ postId: 10229668 });
+  });
+
+  it('光有 topic、没有 start：不猜是哪条帖', () => {
+    expect(parseOsuForumPostLink('https://osu.ppy.sh/community/forums/topics/2216866')).toBeUndefined();
+  });
+
+  it('与 osu 无关的一律 undefined', () => {
+    expect(parseOsuForumPostLink('https://example.com/community/forums/posts/1')).toBeUndefined();
+    // Domain looks similar but isn't osu
+    expect(
+      parseOsuForumPostLink('https://osu.ppy.sh.evil.example/community/forums/posts/1'),
+    ).toBeUndefined();
+    expect(parseOsuForumPostLink('https://osu.ppy.sh/beatmapsets/2608353')).toBeUndefined();
+    expect(parseOsuForumPostLink('随手写的一行字')).toBeUndefined();
+    expect(parseOsuForumPostLink('')).toBeUndefined();
+  });
+});
+
+describe('论坛页 HTML → 帖子作者（parseForumPostAuthors）', () => {
+  it('每个帖块取出 postId → 作者（含 user id）', () => {
+    const html = forumPage(
+      forumPost({ postId: 10229668, username: 'sheepex_', userId: 26699280 }),
+      forumPost({ postId: 10229745, username: 'Kxxn', userId: 26595459 }),
+      forumPost({ postId: 10252138, username: 'peppy', userId: 2 }),
+    );
+    const authors = parseForumPostAuthors(html);
+    expect(authors.size).toBe(3);
+    expect(authors.get(10229668)).toEqual({ username: 'sheepex_', id: 26699280 });
+    expect(authors.get(10229745)).toEqual({ username: 'Kxxn', id: 26595459 });
+    expect(authors.get(10252138)).toEqual({ username: 'peppy', id: 2 });
+  });
+
+  it('用户名里的 HTML 实体还原（`&amp;` 之类）', () => {
+    const html = forumPage(forumPost({ postId: 5, username: 'A&amp;B', userId: 42 }));
+    expect(parseForumPostAuthors(html).get(5)).toEqual({ username: 'A&B', id: 42 });
+  });
+
+  it('没有 data-post-username 时退回 forum-post__user 的文本', () => {
+    const html = forumPage(forumPost({ postId: 7, username: 'Fallback', userId: 9 }));
+    // Wipe data-post-username off the container tag to simulate a site redesign
+    const trimmed = html.replace(/\n    data-post-username="Fallback"/, '');
+    expect(parseForumPostAuthors(trimmed).get(7)).toEqual({ username: 'Fallback', id: 9 });
+  });
+
+  it('删掉的帖子（没有作者锚点）跳过，不编一个作者出来', () => {
+    const html = forumPage(
+      forumPost({ postId: 1, username: 'Alive', userId: 11 }),
+      `<div class="js-forum-post  forum-post" data-post-id="2" data-post-position="2">
+         <div class="forum-post__body">这条被删了</div>
+       </div>`,
+    );
+    const authors = parseForumPostAuthors(html);
+    expect(authors.size).toBe(1);
+    expect(authors.has(2)).toBe(false);
+  });
+
+  it('不是论坛页 / 结构对不上时返回空表，不抛错', () => {
+    expect(parseForumPostAuthors('<html><body>换个页面</body></html>').size).toBe(0);
+    expect(parseForumPostAuthors('').size).toBe(0);
+    // Nearby false positives: js-forum-post-edit--container / js-forum-post-report aren't post containers
+    const noise = `<div class="forum-post__body js-forum-post-edit--container" data-post-id="9"></div>
+      <div class="js-react hidden" data-react="forum-post-report"></div>`;
+    expect(parseForumPostAuthors(noise).size).toBe(0);
+  });
+});
+
+describe('parseAuthorLink：统一判断「这条链接有没有作者可解析」', () => {
+  it('discussion permalink → kind=discussion，取页面路径（去掉 hash）', () => {
+    expect(
+      parseAuthorLink('https://osu.ppy.sh/beatmapsets/2608353/discussion/-/generalAll#/5752323'),
+    ).toEqual({
+      kind: 'discussion',
+      postId: 5752323,
+      pageUrl: 'https://osu.ppy.sh/beatmapsets/2608353/discussion/-/generalAll',
+    });
+  });
+
+  it('论坛帖子链接 → kind=forum', () => {
+    expect(parseAuthorLink('https://osu.ppy.sh/community/forums/posts/10229745')).toEqual({
+      kind: 'forum',
+      postId: 10229745,
+      pageUrl: 'https://osu.ppy.sh/community/forums/posts/10229745',
+    });
+  });
+
+  it('定位不到某条帖的一律 undefined', () => {
+    expect(parseAuthorLink('https://docs.google.com/document/d/abc')).toBeUndefined();
+    expect(parseAuthorLink('https://osu.ppy.sh/users/5596337')).toBeUndefined();
+    expect(parseAuthorLink('https://osu.ppy.sh/community/forums/topics/2216866')).toBeUndefined();
+    expect(
+      parseAuthorLink('https://osu.ppy.sh/beatmapsets/2608353/discussion/-/generalAll'),
+    ).toBeUndefined();
+    expect(parseAuthorLink('')).toBeUndefined();
+  });
+});
+
+describe('resolveLinkAuthor 的拒绝路径（不发请求的那几种）', () => {
+  beforeEach(() => clearAuthorCache());
+
+  it('非 osu 链接 / 定位不到帖子的链接直接放弃，绝不抛错', async () => {
+    await expect(resolveLinkAuthor('https://docs.google.com/document/d/abc')).resolves.toBeUndefined();
+    await expect(resolveLinkAuthor('https://i.imgur.com/abc.png')).resolves.toBeUndefined();
+    // Domain looks similar but isn't osu: don't send a request after it
+    await expect(
+      resolveLinkAuthor('https://osu.ppy.sh.evil.example/beatmapsets/1/discussion/-/generalAll#/2'),
+    ).resolves.toBeUndefined();
+    await expect(
+      resolveLinkAuthor('https://osu.ppy.sh.evil.example/community/forums/posts/1'),
+    ).resolves.toBeUndefined();
+    // A discussion link but without #/<id>: we don't know which post it means, so don't guess
+    await expect(
+      resolveLinkAuthor('https://osu.ppy.sh/beatmapsets/2608353/discussion/-/generalAll'),
+    ).resolves.toBeUndefined();
+    // A forum topic but without start: same as above
+    await expect(
+      resolveLinkAuthor('https://osu.ppy.sh/community/forums/topics/2216866'),
+    ).resolves.toBeUndefined();
+    await expect(resolveLinkAuthor('')).resolves.toBeUndefined();
+  });
+});
+
+describe('resolveLinkAuthor 的缓存语义（失焦会反复触发，但不是反复失败的理由）', () => {
+  beforeEach(() => clearAuthorCache());
+  afterEach(() => vi.unstubAllGlobals());
+
+  // A forum post link in its real form: the post can be located, so this one always gets
+  // as far as fetch.
+  const LINK = 'https://osu.ppy.sh/community/forums/posts/10229745';
+
+  it('解析成功 → 缓存命中，不再发第二次请求', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      headers: new Headers({ 'content-type': 'text/html; charset=utf-8' }),
+      text: async () => forumPage(forumPost({ postId: 10229745, username: 'Kxxn', userId: 26595459 })),
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(resolveLinkAuthor(LINK)).resolves.toEqual({ id: 26595459, username: 'Kxxn' });
+    await expect(resolveLinkAuthor(LINK)).resolves.toEqual({ id: 26595459, username: 'Kxxn' });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('解析失败 → 不缓存，下次失焦会重试（否则一次抖动污染整个会话）', async () => {
+    // First network call fails, second succeeds -- exactly the shape of "a brief network drop".
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce({
+        ok: true,
+        headers: new Headers({ 'content-type': 'text/html; charset=utf-8' }),
+        text: async () => forumPage(forumPost({ postId: 10229745, username: 'Kxxn', userId: 26595459 })),
+      });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(resolveLinkAuthor(LINK)).resolves.toBeUndefined();
+    await expect(resolveLinkAuthor(LINK)).resolves.toEqual({ id: 26595459, username: 'Kxxn' });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('取回来是 HTML 但没有那条帖 → 也算失败，不缓存下来', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      headers: new Headers({ 'content-type': 'text/html; charset=utf-8' }),
+      // The page doesn't have post 10229745
+      text: async () => forumPage(forumPost({ postId: 999, username: '别人', userId: 1 })),
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(resolveLinkAuthor(LINK)).resolves.toBeUndefined();
+    await expect(resolveLinkAuthor(LINK)).resolves.toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});

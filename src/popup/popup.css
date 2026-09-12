@@ -1,0 +1,120 @@
+/* The popup window sizes to its content; pin it to 400px here, otherwise the four cells get squashed */
+#root {
+  width: 400px;
+}
+
+/* Root container: stacked vertically, spacing is handled entirely by gap, blocks no longer set their own margin */
+.pu {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 14px 16px;
+}
+
+/* Header row: dot + extension name + total aligned right */
+.pu__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* The small dot left of the extension name; the outer ring is the same color at 22% opacity, making a halo */
+.pu__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+/* The extension name, a bit heavier than body text */
+.pu__title {
+  font-weight: 650;
+  letter-spacing: 0.2px;
+}
+
+/* "共 N 条", aligned right */
+.pu__subtitle {
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* 2×2 four-cell stats */
+.pu__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+/* One stat cell: label + number, border and background taken from the theme */
+.pu__cell {
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+}
+
+/* Cell label, e.g. "General · Internal" */
+.pu__cell-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* Same color and size as .zone__badge in the app's zones -- the dot in the popup's
+   "General · Internal" cell is the same dot as its matching zone on the Checklist page. */
+.pu__cell-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* The number in a cell; tabular figures so it doesn't jitter when the digit count changes */
+.pu__cell-count {
+  margin-top: 4px;
+  font-size: 24px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+
+/* Bottom hint line, shared by the empty state and errors */
+.pu__hint {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+/* Error state only changes the color, the layout stays put */
+.pu__hint--error {
+  color: var(--danger);
+}
+
+/* The button that opens the full-page app, the popup's only primary action */
+.pu__open {
+  border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 11px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+/* On hover, invert to a solid fill; don't invert when disabled, so :disabled is excluded here */
+.pu__open:hover:not(:disabled) {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* Dim it and reset the cursor when unavailable, so it reads as not clickable */
+.pu__open:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

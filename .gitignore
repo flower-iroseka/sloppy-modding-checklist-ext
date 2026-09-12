@@ -1,0 +1,20 @@
+# 依赖与构建产物
+node_modules/
+dist/
+
+# 调试用的 Chrome for Testing（本机下载，约 450MB）
+chrome/
+
+# 调试 Chrome 的 profile 与截图
+.probe-profile*/
+.probe-shots/
+
+# 临时文件
+.tmp-*
+
+# 系统杂项
+.DS_Store
+Thumbs.db
+
+# 给 agent 看的参考资料，不入库
+.claude/

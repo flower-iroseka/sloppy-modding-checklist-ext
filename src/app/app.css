@@ -1,0 +1,592 @@
+/* Whole-page skeleton: top bar on top, main takes the rest of the height. */
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---- Top bar ---- */
+/* Sticky top bar (about 51px tall, .zone's scroll-margin-top is calculated from it), translucent with a blur. */
+.app__topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-page) 86%, transparent);
+  backdrop-filter: blur(6px);
+}
+
+/* Brand area: logo plus extension name. */
+.app__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* That green square logo. */
+.app__logo {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+/* Extension name. */
+.app__brandname {
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+/* Pushes the tab bar to the far right of the top bar. */
+.app__tabs {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+/* A single tab button; unselected it's grey text with no background. */
+.app__tab {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.app__tab:hover {
+  color: var(--text);
+  background: var(--bg-surface-2);
+}
+
+/* The currently selected tab: solid green background. */
+.app__tab--active {
+  color: var(--accent-ink);
+  background: var(--accent);
+}
+
+/* The active tab stays as-is on hover. Both rules have the same specificity (class +
+   pseudo-class) and the later one wins -- but it only sets color, so background would fall
+   back to .app__tab:hover above and turn the green into a dark background. That's why it has
+   to be spelled out again here, otherwise "the highlighted one" becomes the darkest one on
+   hover. */
+.app__tab--active:hover {
+  color: var(--accent-ink);
+  background: var(--accent);
+}
+
+/* ---- Main ---- */
+/* Main content area: has a max width, centered. */
+.app__main {
+  flex: 1;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+/* Two columns (General / Individual), each stacking two zones vertically. */
+.cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+/* Collapse to one column on narrow screens. 900px comes from working out "how much each
+   column has left": subtract .app__main's 24px padding on each side and the 24px column gap,
+   and each column gets about (900-72)/2 ≈ 414px -- any narrower and the link row in a card
+   (index + author/tag + note button) starts wrapping. */
+@media (max-width: 900px) {
+  .cols {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Column heading row: the heading plus the jump buttons on the right. */
+.col__head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+/* Column heading text (General / Individual). */
+.col__heading {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* Jump button group, rendered only when the content is taller than one screen. */
+.col__jump {
+  display: flex;
+  gap: 6px;
+}
+
+/* A single jump button: a small pill with a down arrow. */
+.col__jumpbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.col__jumpbtn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* One column: a heading plus two zones, stacked vertically. */
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* One zone: a rounded box holding the header and the card list. */
+.zone {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-surface);
+  overflow: hidden;
+  /* The top bar is sticky (about 51px tall); without this, jumping to a zone would put it underneath */
+  scroll-margin-top: 68px;
+}
+
+/* Back-to-top button in the bottom right, rendered only when the content is taller than one screen. */
+.totop {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--bg-surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 35%);
+}
+
+.totop:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Zone header: source dot, source name, count, add button. */
+.zone__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-surface-2);
+}
+
+/* Source dot. */
+.zone__badge {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* Source name (Internal / External). */
+.zone__title {
+  font-size: 15px;
+  font-weight: 650;
+}
+
+/* How many entries are in this zone. */
+.zone__count {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+}
+
+/* The "＋" at the far right of the header, pushed over by margin-left: auto. */
+.zone__add {
+  margin-left: auto;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  width: 22px;
+  height: 22px;
+  line-height: 1;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.zone__add:not(:disabled):hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* The target zone while a drag hovers over it */
+.zone--over {
+  border-color: var(--accent);
+  border-style: dashed;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+/* The card list; an empty zone keeps a min height too so a drag has something to land on. */
+.zone__list {
+  list-style: none;
+  margin: 0;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /* An empty zone still needs a hittable drop area */
+  min-height: 62px;
+}
+
+/* Empty state: a drag hint plus an "添加一条" button. */
+.zone__empty {
+  flex: 1;
+  /* The empty state now has two things (the drag hint + "添加一条"), so it's a column flex rather than grid */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 14px;
+  text-align: center;
+  padding: 14px 10px;
+}
+
+/* ---- Cards (CODING_PLAN §5.2) ---- */
+/* A single card: head row plus link row, stacked vertically; touch-action: none is for dragging. */
+.card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface-2);
+  padding: 6px 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  touch-action: none;
+}
+
+.card:hover {
+  border-color: color-mix(in srgb, var(--accent) 34%, var(--border));
+}
+
+/* How the card being dragged looks while it stays in place. */
+.card--dragging {
+  opacity: 0.35;
+}
+
+/* The drag overlay that follows the pointer, showing only the index and the summary. */
+.card--overlay {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  cursor: grabbing;
+  border-color: var(--accent);
+  box-shadow: 0 12px 28px rgb(0 0 0 / 45%);
+  max-width: 460px;
+}
+
+/* Card head row: drag handle, index, summary, edit and delete buttons. */
+.card__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+}
+
+/* The ⋮⋮ drag handle; dnd-kit's listeners are attached only to this button (see ChecklistView). */
+.card__handle {
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  padding: 2px;
+  border-radius: 4px;
+  cursor: grab;
+  touch-action: none;
+}
+
+.card__handle:hover {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.card__handle:active {
+  cursor: grabbing;
+}
+
+/* Index #1 #2 ..., computed from the in-zone position, not persisted. */
+.card__index {
+  flex: none;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  padding-top: 1px;
+}
+
+/* Summary text, keeping the line breaks the user typed. */
+.card__summary {
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+/* Small icon buttons like edit / delete. */
+.card__iconbtn {
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  padding: 3px 5px;
+  border-radius: 4px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.card__iconbtn:hover {
+  color: var(--text);
+  background: var(--bg-page);
+}
+
+/* How the delete button looks in the two-step confirm state: red border and text, and the button switches to the two characters "删除". */
+.card__iconbtn--danger,
+.card__iconbtn--danger:hover {
+  border-color: color-mix(in srgb, var(--danger) 60%, transparent);
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* Links + note on the same row (the note sits right). When there are no links this row is
+   just the note button, so it doesn't need a row of its own. padding-left lines up with the
+   handle + index in the head row above. */
+.card__links {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-left: 22px;
+}
+
+/* A link's pill label, truncated when too long. */
+.card__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-size: 12px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The index marker in front of a link (①②③). */
+.card__linkidx {
+  color: var(--text-muted);
+}
+
+/* Discussion-page categories (generalAll / timeline ...) no longer go on the card: that part
+   is already in the link URL, and another label on the card just eats width for nothing. */
+
+/* Note button; shows preview text when there's a note, and a dashed-outline "备注" when there isn't. */
+.card__notebtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  /* Pushed to the far right of this row, to separate it from the links */
+  margin-left: auto;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 12px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.card__notebtn:hover {
+  color: var(--text);
+  background: var(--bg-page);
+}
+
+.card__notebtn--empty {
+  border: 1px dashed var(--border);
+  padding: 0 8px;
+}
+
+/* Note preview, truncated to one line. */
+.card__notepreview {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 340px;
+}
+
+/* The note editor is now a direct child of the card (no longer nested in .card__foot).
+   flex-basis:100% can't be used here anymore -- the card is a column flex, so that would
+   become "fill the whole height". */
+.card__noteedit {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-left: 22px;
+}
+
+/* Note input. */
+.card__noteta {
+  min-height: 84px;
+  font-size: 14px;
+}
+
+/* Note cancel / save, right-aligned. */
+.card__noteactions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.card__noteactions .btn {
+  font-size: 13px;
+  padding: 6px 12px;
+}
+
+/* Page title / meta info */
+/* Page title on the settings page. */
+.view__title {
+  margin: 0 0 16px;
+  font-size: 22px;
+}
+
+/* The meta line under the Checklist page title (entry count plus drag hint). */
+.view__meta {
+  margin: 0 0 16px;
+  color: var(--text-muted);
+  font-size: 15px;
+}
+
+/* The total entry count in the meta line. */
+.view__meta strong {
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Settings panels */
+/* One panel on the settings page. */
+.panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-surface);
+  padding: 20px;
+  max-width: 640px;
+}
+
+/* Space between panels. */
+.panel + .panel {
+  margin-top: 16px;
+}
+
+/* Secondary panel, dimmed as a whole. */
+.panel--muted {
+  opacity: 0.72;
+}
+
+/* Panel title. */
+.panel__title {
+  margin: 0 0 8px;
+  font-size: 17px;
+}
+
+/* Panel body, usually grey explanatory text. */
+.panel__body {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 15px;
+}
+
+/* Data panel: stats / action rows */
+/* Stat cards, wrapping automatically when they don't fit on one row. */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 14px 0 16px;
+}
+
+/* One stat cell. */
+.stats__item {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface-2);
+  padding: 8px 10px;
+}
+
+/* Metric name. */
+.stats__item dt {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* Metric value. */
+.stats__item dd {
+  margin: 2px 0 0;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Generic button row, wrapping when it doesn't fit. */
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* The dangerous-action row (clear data), separated from above by a divider line. */
+.row--danger {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}

@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "osu! Modding Checklist",
+  "short_name": "osu Checklist",
+  "description": "在 osu! beatmap discussion 上，按 General/Individual × Internal/External 四格维护 modding checklist。",
+  "version": "0.4.0",
+  "icons": {
+    "16": "icons/16.png",
+    "32": "icons/32.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  },
+  "action": {
+    "default_title": "osu! Modding Checklist",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/16.png",
+      "32": "icons/32.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://osu.ppy.sh/beatmapsets/*/discussion*"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": ["storage", "scripting", "identity", "alarms"],
+  "host_permissions": [
+    "https://osu.ppy.sh/*",
+    "https://www.dropbox.com/*",
+    "https://api.dropboxapi.com/*",
+    "https://content.dropboxapi.com/*"
+  ],
+  "optional_host_permissions": ["https://*/*", "http://*/*"]
+}

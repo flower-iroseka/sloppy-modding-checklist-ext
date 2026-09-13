@@ -53,5 +53,5 @@ export function exposeDevApi(): void {
       dnd: () => readDndTrace(),
     },
   });
-  console.info('[osu-mod-checklist] dev API exposed at window.__mc (debug=1)');
+  console.info('[sloppy-mod-checklist] dev API exposed at window.__mc (debug=1)');
 }

@@ -1,132 +1,136 @@
-# osu! Modding Checklist
+# Sloppy Modding Checklist
 
-在 osu! 的 beatmap discussion 页面上，把谱面里该检查的各种问题整理成一份清单。
+**English** | [中文](README.zh.md)
 
-准备申请 BN 前，用它整理这张谱面还有哪些问题要看，免得漏掉该查的项；平时也可以当作普通的 mod 检查表，把发现的问题逐条记下来，用来提高 mod 质量。
+Collect everything that needs checking on a beatmap into one list, on osu!'s beatmap discussion pages.
 
-清单按两个维度分类：
+Use it before applying for BN to work out what still needs looking at on a map, so nothing gets missed; day to day it also works as an ordinary modding checklist — write down what you find, one line at a time, and improve your modding.
 
-- **范围**：**General** 是整张谱面的问题（例如整体音量、节奏）；**Individual** 是某个具体物件的问题（例如某一个 note 的摆放）。
-- **来源**：**Internal** 是自己提出的问题；**External** 是别人提出的问题。
+The list is sorted along two axes:
 
-两个维度组合起来，就是四个格子。
+- **Scope**: **General** is a problem with the map as a whole (overall volume, timing); **Individual** is a problem with one specific object (the placement of a single note).
+- **Source**: **Internal** is a problem you raised yourself; **External** is one someone else raised.
 
-这个思路来自 Electoz 的 [Advanced Modding Guide](https://electoz.s-ul.eu/N7Y53Jaj)（2020-04-19 版）。扩展把这份清单做成了浏览器里的工具，方便一键填写，还可以跨设备同步。
+Put the two together and you get four cells.
+
+The idea comes from Electoz's [Advanced Modding Guide](https://electoz.s-ul.eu/N7Y53Jaj) (19 April 2020). This extension turns that list into a browser tool: one click to fill in, and it syncs across devices.
 
 ---
 
-## 安装
+## Install
 
-构建需要 Node 18+。浏览器使用 Chrome 或 Edge。
+Building needs Node 18+. Use Chrome or Edge.
 
 ```bash
 npm install
-npm run build          # 产物在 dist/
+npm run build          # output lands in dist/
 ```
 
-然后在浏览器中：
+Then in the browser:
 
-1. 打开 `chrome://extensions`，在右上角开启「开发者模式」；
-2. 点击「加载已解压的扩展程序」，选择 **`dist/`** 目录（不是仓库根目录）。
+1. Open `chrome://extensions` and turn on "Developer mode" in the top right;
+2. Click "Load unpacked" and pick the **`dist/`** directory (not the repository root).
 
-修改代码后需要重新构建，并在扩展管理页点击一次「重新加载」。
+After changing code, rebuild and click "Reload" once on the extensions page.
 
 ---
 
-## 使用方法
+## Usage
 
-### 1. 在 discussion 页面添加记录
+### 1. Adding entries on a discussion page
 
-打开任意 beatmap discussion 页面（`https://osu.ppy.sh/beatmapsets/<id>/discussion*`），每条帖子旁边会多出一个「＋ 添加到 Checklist」按钮，点击它就能把这条修改加进清单。
+Open any beatmap discussion page (`https://osu.ppy.sh/beatmapsets/<id>/discussion*`). Every post gets a "＋ Add to Checklist" button next to it; clicking it puts that change on the list.
 
-查看清单时，点击页面左下角的浮动按钮，打开 Checklist 页面。
+To see the list, click the floating button in the bottom left corner to open the Checklist page.
 
-### 2. 查看统计
+### 2. Checking the stats
 
-点击浏览器工具栏上的扩展图标，会弹出一个窗口，显示清单的统计数据：四个分类各有多少条、总共有多少条。要修改内容，点击窗口下方的「打开 Checklist 页面」。
+Click the extension icon in the browser toolbar and a popup opens showing the list's stats: how many entries are in each of the four categories, and how many in total. To change the contents, click "Open the Checklist page" at the bottom of the popup.
 
-### 3. 在 Checklist 页面整理记录
+### 3. Tidying entries on the Checklist page
 
-页面按上面说的两个维度分成四个格子，每个格子里的记录排成一张张卡片。卡片可以从左侧的 `⋮⋮` 手柄拖动：
+The page is split into four cells along the two axes above, and the entries in each cell are laid out as cards. A card can be dragged by the `⋮⋮` handle on its left:
 
-- **在同一个格子内拖动**：调整记录在这个格子里的先后顺序；
-- **拖到另一个格子**：修改这条记录的范围与来源（例如从 General 改到 Individual）；
-- **键盘快捷键**：按 `Tab` 选中卡片左侧的 `⋮⋮` 手柄，按 `空格` 拿起这张卡片，用方向键移动到目标位置，再按 `空格` 放下；按 `Esc` 取消这次拖动。
+- **Dragging inside one cell**: changes the order of the entries in that cell;
+- **Dragging into another cell**: changes that entry's scope and source (General to Individual, say);
+- **Keyboard shortcut**: press `Tab` to select the `⋮⋮` handle on the left of a card, press `Space` to pick the card up, use the arrow keys to move it to the target position, then press `Space` to drop it; press `Esc` to cancel the drag.
 
-卡片右上角有三个图标：编辑、添加备注、删除。删除时会提示确认。
+A card has three icons in its top right corner: edit, add a note, delete. Deleting asks for confirmation.
 
-### 4. 修改界面语言
+### 4. Changing the UI language
 
-打开 Checklist 页面后，切换到顶部的「设置」标签页，最上面有一个语言下拉框，可选下列三种配置：**跟随浏览器**（默认）、**中文**、**English**。修改后立即生效，扩展的每个页面都会同步。
+Open the Checklist page and switch to the "Settings" tab at the top. The first field is a language dropdown with three choices: **Match browser** (the default), **中文**, **English**. A change takes effect immediately, with nothing to save, and every page of the extension follows.
 
-选择「跟随浏览器」时只识别**主语言**：`zh-CN`、`zh-TW`、`zh` 都算中文，`en-*` 都算英文，其它语言一律使用英文。
+Each language's name is written in that language (the English UI has a "中文" entry too), so even after the UI turns into a language you cannot read, you can still recognize "中文" in that list and switch back.
+
+With "Match browser", only the **primary language** is looked at: `zh-CN`, `zh-TW` and `zh` all count as Chinese, `en-*` as English, and anything else falls back to English.
 
 ---
 
-## 同步（可选）
+## Sync (optional)
 
-数据默认保存在本机。
+Data is stored on this machine by default.
 
-同步分上传和拉取。**上传**是把本机的清单写到远端，**拉取**是把远端的清单取回本机；这里的「远端」指所选同步位置上的那份文件。启用同步并选好同步方式之后，清单会保存成 `modding-checklist.json` 这一个文件，各台设备同步的是同一份。
+Sync goes two ways. **Upload** writes the local list to the remote; **pull** brings the remote list back to this machine. "Remote" here means the file at the sync target you picked. Once sync is enabled and a sync method chosen, the list is stored as a single file named `modding-checklist.json`, and every device syncs the same one.
 
-**同一时间只能使用一个同步方式**，在设置页的「同步方式」下拉框里选择：
+**Only one sync method can be used at a time.** Pick it from the "Sync target" dropdown in Settings:
 
-- **本地同步文件夹（免注册）** —— 默认选项。先安装网盘的桌面客户端（Dropbox、坚果云等都提供），它把网盘里的一个目录挂载成电脑上的本地文件夹；然后在设置页选中那个文件夹。扩展往文件夹里写文件，上传到云端由客户端完成。代价是电脑上要一直运行那个客户端，上传时机也由客户端决定。浏览器偶尔会收回文件夹权限，此时设置页会提示点击一次「重新授权」。
-- **WebDAV** —— 自行填写服务器地址和账号密码（坚果云、Nextcloud 等都提供 WebDAV）。服务器地址需自行填写，点击「保存并测试连接」时会向浏览器申请访问该服务器的权限。
-- **Dropbox** —— 需要自行前往 Dropbox 控制台注册一个应用（下面有逐步向导）。
+- **Local sync folder (no signup)** — the default. Install the cloud drive's desktop client first (Dropbox, Nutstore and others all provide one); it mounts a directory in your cloud drive as a local folder on the computer, and you pick that folder in Settings. The extension writes files into the folder and the client handles uploading to the cloud. The cost is that the client has to be running on the computer, and when things get uploaded is up to it. The browser occasionally takes the folder permission back, and Settings will then ask you to click "Re-authorize" once.
+- **WebDAV** — fill in the server address and account details yourself (Nutstore, Nextcloud and others all offer WebDAV). The server address is yours to fill in, and clicking "Save and test connection" asks the browser for permission to reach that server.
+- **Dropbox** — you need to register an application in the Dropbox console yourself (there's a step-by-step guide below).
 
-### Dropbox 的注册向导
+### Dropbox registration guide
 
-注册地址：[Dropbox App Console](https://www.dropbox.com/developers/apps)（`https://www.dropbox.com/developers/apps`）
+Register at: [Dropbox App Console](https://www.dropbox.com/developers/apps) (`https://www.dropbox.com/developers/apps`)
 
-1. Create app → 选 Scoped access → 类型选 **App folder**。
-2. 「Permissions」里勾上 files.content.read、files.content.write、files.metadata.read。**勾完必须点页面底部的 Submit**，只勾不提交等于没配。
-3. 「OAuth 2」→ Redirect URIs 里粘贴下面这个地址。
-4. 把 App key 填入 client_id 栏（App secret 不需要填）。
+1. Create app → choose Scoped access → pick the **App folder** type.
+2. Under "Permissions", tick files.content.read, files.content.write and files.metadata.read. **You must then click Submit at the bottom of the page**; ticking without submitting counts as not configured.
+3. Under "OAuth 2" → Redirect URIs, paste the address shown below.
+4. Paste the App key into the client_id field (the App secret is not needed).
 
-第 3 步要粘贴的地址，就是设置页「重定向地址」一栏里的那一串，旁边有「复制」按钮。它长这样，**必须和控制台里登记的那一串逐字符一致**（连结尾的斜杠都算）：
+The address to paste in step 3 is the one shown in the "Redirect URL" field in Settings, with a "Copy" button next to it. It looks like this, and **must match the one registered in the console character for character** (including the trailing slash):
 
 ```
-https://<扩展 ID>.chromiumapp.org/
+https://<extension ID>.chromiumapp.org/
 ```
 
-文件放在 `/Apps/<应用名>/` 里，不会碰到 Dropbox 里的其它内容。
+Files live under `/Apps/<app name>/`, so nothing else in the Dropbox account is touched.
 
-授权页报错时，扩展读不到报错原文。常见的是这几种：
+When the authorization page errors out, the extension cannot read the error text. The usual ones are:
 
-- 授权页显示 **No scope requested can be granted for this app**：「Permissions」里那三个 scope 没勾，或者勾了**没点 Submit**（最容易漏的一条）。改完要重新走一次授权，老 token 不会自动补上权限。
-- 授权页显示 redirect_uri 不在白名单里：「OAuth 2」页里的 Redirect URIs 与设置页里那串不一致（结尾斜杠、http/https 都算）。
-- 授权页显示应用不可用 / client_id 无效：App key 填错了，或者这个应用在 App Console 里被停用了。
+- The authorization page shows **"No scope requested can be granted for this app"**: those three scopes are not ticked under "Permissions", or they are ticked but you **did not click Submit** (the easiest one to miss). After fixing it you must authorize again; an old token does not pick up new permissions.
+- The authorization page shows the redirect_uri is not whitelisted: the Redirect URIs on the "OAuth 2" page do not match the address in Settings (a trailing slash, or http vs https, counts as a mismatch).
+- The authorization page shows the app is unavailable / the client_id is invalid: the App key is wrong, or the app has been disabled in the App Console.
 
-### 同步时机
+### When sync runs
 
-- **自动同步**（默认关闭）：开启后，本地每修改一次，**30 秒**后上传一次；另外每小时拉取一次。
-- **打开扩展时拉取**（默认关闭）：打开 Checklist 页面时拉取一次，十分钟内刚拉取过就跳过。
+- **Auto-upload** (off by default): once on, every local change is uploaded **30 seconds** later, plus a pull once an hour.
+- **Pull when the extension opens** (off by default): pulls once when the Checklist page opens, and skips it if a pull happened within the last ten minutes.
 
-这两个开关都在设置页里。
+Both switches are in Settings.
 
-### 冲突处理
+### Handling conflicts
 
-两台设备都修改过、远端又有别的设备改过时，扩展会提示是否覆盖。设置页的「冲突策略」决定什么时候提示：
+When both devices have changed things and the remote has an update from another device, the extension asks before overwriting. The "Conflict strategy" in Settings decides when it asks:
 
-| 选项 | 意思 |
+| Option | Meaning |
 | --- | --- |
-| 时间戳较新的胜出 | 默认。两边都有更新时，按 `updatedAt` 判断，用较新的那一份 |
-| 本地优先 | 一律用本地的，覆盖远端 |
-| 远端优先 | 一律用远端的，覆盖本地 |
-| 每次都要确认 | 任何改动都先确认 |
+| Newest timestamp wins | Default. When both sides have updates, `updatedAt` decides; the newer one is used |
+| Local wins | Always use the local copy and overwrite the remote |
+| Remote wins | Always use the remote copy and overwrite the local one |
+| Always ask | Confirm before every change |
 
-选择「每次都要确认」，或者扩展无法自动判断哪一边较新时，设置页会显示一个冲突处理面板，提供三个选项：保留本地 / 采用远端 / 两边合并。**覆盖远端之前会自动备份一份**（本机和远端各保留最近 5 份）。
+With "Always ask", or when the extension cannot tell which side is newer, Settings shows a conflict panel offering three options: keep local / take remote / merge both. **A backup is taken automatically before overwriting the remote** (the five most recent are kept, for the local copy and the remote separately).
 
 ---
 
-## 数据存放与隐私
+## Where the data lives, and privacy
 
-- **清单内容**保存在浏览器的 `chrome.storage.local` 里。手动备份、更换浏览器、更换设备，都通过设置页「数据」面板的导出 / 导入完成，导出的是一份 JSON 文件。
-- **Dropbox 的 token** 也保存在浏览器的 `storage.local` 里，**不会进入导出的 JSON**。
-- **client_id / client_secret** 只在扩展的 service worker 里用于换取 token；页面代码拿不到凭据，也拿不到 token。
-- 扩展**只会**向下面这几个域发送请求。WebDAV 使用的服务器地址需自行填写，第一次保存时会额外申请该域的权限。
-- 没有任何遥测，也没有其它会收到数据的地方：作者没有服务器。
+- **The list** is stored in the browser's `chrome.storage.local`. Manual backups, switching browsers and switching machines all go through export / import in the "Data" panel in Settings — that is a single JSON file.
+- **The Dropbox token** is stored in the same `storage.local`, and **never goes into the exported JSON**.
+- **client_id / client_secret** are only used inside the extension's service worker to exchange for a token; the page code never gets hold of the credentials, nor the token.
+- The extension sends requests to **only** these domains. The WebDAV server address is yours to fill in, so its domain is requested separately the first time you save.
+- There is no telemetry, and nothing else receives your data: the author has no server.
 
 ```
 https://osu.ppy.sh/*
@@ -135,34 +139,44 @@ https://api.dropboxapi.com/*
 https://content.dropboxapi.com/*
 ```
 
-（`https://osu.ppy.sh/*` 是内容脚本读取帖子用的；另外三个都是 Dropbox 的：授权页、RPC 接口、文件上传下载。）
+(`https://osu.ppy.sh/*` is the content script reading posts; the other three are Dropbox's: the authorization page, the RPC API, and file upload/download.)
 
 ---
 
-## 开发
+## Development
 
 ```bash
 npm run typecheck      # tsc --noEmit
 npm test               # vitest run
-npm run build          # 先 clean 再分别构建页面与内容脚本
-npm run icons          # 重新生成 public/icons/*（一般不需要执行）
+npm run build          # clean, then build the pages and the content script separately
+npm run icons          # regenerate public/icons/* (normally not needed)
 ```
 
-`npm run build` 会依次执行两个构建：先构建页面（app / popup / background），再构建内容脚本。
+`npm run build` runs two builds in order: the pages first (app / popup / background), then the content script.
 
-分成两个构建，是因为内容脚本有两条限制：它必须是一个单独的 JS 文件，浏览器把它当普通脚本直接执行（里面不能用 `import`）；注入到 shadow root 里的那两份样式表还要以字符串形式内联进这个文件，因为 shadow root 里没法加载外部样式文件。
+They are split in two because the content script has two constraints: it has to be a single JS file that the browser executes as a plain script (no `import` inside), and the two stylesheets injected into the shadow root are inlined into that file as strings, because a shadow root cannot load an external stylesheet.
 
-两个构建也可以单独执行：
+Either build can also be run on its own:
 
 ```bash
-npm run build:pages      # 只构建页面
-npm run build:content    # 只构建内容脚本
+npm run build:pages      # pages only
+npm run build:content    # content script only
 ```
 
-`build:pages` 会先清空整个 `dist/`，单独执行后要记得再跑一次 `build:content`。
+`build:pages` wipes the whole `dist/` first, so after running it alone, run `build:content` again.
 
-真机验证使用 `scripts/` 下的冒烟脚本：它们用 CDP 驱动一个装了 `dist/` 的真实 Chrome，每个里程碑一个文件（`smoke-m1.mjs` … `smoke-m9.mjs`）。
+Real-browser checks use the smoke scripts under `scripts/`: they drive a real Chrome loaded with `dist/` over CDP, one file per milestone (`smoke-m1.mjs` … `smoke-m9.mjs`).
 
 ---
 
-本扩展与 osu! 官方无关。
+## License and credits
+
+[MIT License](LICENSE), by flower-iroseka.
+
+This extension was generated by DeepSeek V4 vibe coding.
+
+It is a convenience tool built on the basic ideas of Electoz's [Advanced Modding Guide](https://electoz.s-ul.eu/N7Y53Jaj) (19 April 2020), and is for personal entertainment only. Electoz's osu! profile is [here](https://osu.ppy.sh/users/6485263).
+
+---
+
+This extension is not affiliated with osu!.

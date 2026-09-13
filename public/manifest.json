@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "osu! Modding Checklist",
-  "short_name": "osu Checklist",
+  "name": "Sloppy Modding Checklist",
+  "short_name": "Sloppy Checklist",
   "description": "在 osu! beatmap discussion 上，按 General/Individual × Internal/External 四格维护 modding checklist。",
   "version": "0.4.0",
   "icons": {
@@ -11,7 +11,7 @@
     "128": "icons/128.png"
   },
   "action": {
-    "default_title": "osu! Modding Checklist",
+    "default_title": "Sloppy Modding Checklist",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/16.png",

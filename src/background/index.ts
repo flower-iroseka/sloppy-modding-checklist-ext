@@ -41,7 +41,7 @@ import {
 const APP_PAGE = 'app.html';
 
 chrome.runtime.onInstalled.addListener((details) => {
-  console.info(`[osu-mod-checklist] service worker installed (reason=${details.reason})`);
+  console.info(`[sloppy-mod-checklist] service worker installed (reason=${details.reason})`);
   void initSync();
 });
 
@@ -224,7 +224,7 @@ async function respond(
       // The port is already closed (page navigated away / SW recycled). Nothing else we can
       // do, so leave a trace in the log. Only the base locale can be rendered here -- it's a
       // pure log, nobody treats it as UI copy.
-      console.warn('[osu-mod-checklist] 响应发不出去，消息端口已关闭：', renderMsg(message, 'zh'));
+      console.warn('[sloppy-mod-checklist] 响应发不出去，消息端口已关闭：', renderMsg(message, 'zh'));
     }
   }
 }

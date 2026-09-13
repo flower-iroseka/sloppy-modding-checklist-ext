@@ -1,5 +1,5 @@
 /*
- * osu! Modding Checklist -- theme tokens (dark grey + #AEFF7E Ithaca green)
+ * Sloppy Modding Checklist -- theme tokens (dark grey + #AEFF7E Ithaca green)
  *
  * Shared by the extension pages (popup / app) and the content script's overlay (CODING_PLAN
  * §4); shadow DOM keeps them from leaking into the osu page.

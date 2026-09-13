@@ -474,7 +474,7 @@ export const zh = {
   // content/index.tsx: when the locale changes they have to be relabelled by hand.
   'content.addEntry': '＋ 添加到 Checklist',
   'content.addEntryTitle': '把这条 mod 加入你的 checklist',
-  'content.openApp': '打开 osu! Modding Checklist',
+  'content.openApp': '打开 Sloppy Modding Checklist',
   'content.added': '已添加到 Checklist',
   'content.addedLocalSaveFailed': '已添加到 Checklist（本地保存失败）',
   'content.readFailed': '没能读取这条帖子的信息',
@@ -484,4 +484,15 @@ export const zh = {
   // ---------------------------------------------------------------- Toasts
   'toast.copied': '已复制，粘到控制台即可',
   'toast.copyFailed': '复制失败，请手动选中输入框里的地址',
+
+  // ---------------------------------------------------------------- About panel
+  'about.title': '关于',
+  'about.author': '作者：{author}',
+  'about.license': 'MIT License',
+  'about.aiNote': '本扩展由 DeepSeek V4 的 vibe coding 生成。',
+  'about.repo': 'GitHub 仓库',
+  'about.electoz':
+    '本扩展是依据 Electoz 的《Advanced Modding Guide》的基本思路做的便利工具，仅供个人娱乐使用。',
+  'about.electozUser': 'Electoz 的 osu! 主页',
+  'about.electozGuide': 'Advanced Modding Guide（PDF）',
 } as const;

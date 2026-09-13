@@ -33,7 +33,7 @@ export function getCurrentUserId(): Promise<number | undefined> {
         resolve(id);
       });
     } catch (e) {
-      console.warn('[osu-mod-checklist] 读取当前用户失败，来源推荐退回归 external', e);
+      console.warn('[sloppy-mod-checklist] 读取当前用户失败，来源推荐退回归 external', e);
       resolve(undefined);
     }
   }).finally(() => {

@@ -546,6 +546,15 @@
   font-size: 15px;
 }
 
+/* Small print inside a panel: the attribution and where-it-came-from note on the About card.
+   One step below .panel__body, and it may run several lines. */
+.panel__note {
+  margin: 14px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 /* Data panel: stats / action rows */
 /* Stat cards, wrapping automatically when they don't fit on one row. */
 .stats {

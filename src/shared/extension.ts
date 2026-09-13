@@ -1,5 +1,5 @@
 /** Extension name, reused across popup / app / content (so it isn't hardcoded in each place). */
-export const EXT_NAME = 'osu! Modding Checklist';
+export const EXT_NAME = 'Sloppy Modding Checklist';
 
 /** Path of app.html inside the extension package (relative to the extension root). */
 const APP_PAGE = 'app.html';

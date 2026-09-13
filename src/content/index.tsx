@@ -163,7 +163,7 @@ function mountOverlay(): void {
   const bg = getComputedStyle(host).getPropertyValue('--bg-surface').trim();
   if (!bg) {
     console.warn(
-      '[osu-mod-checklist] 主题变量未注入 shadow root（theme.css 的选择器改写可能失效），弹层配色会回退到兜底值',
+      '[sloppy-mod-checklist] 主题变量未注入 shadow root（theme.css 的选择器改写可能失效），弹层配色会回退到兜底值',
     );
   }
 }
@@ -193,7 +193,7 @@ async function onAddClicked(
     setPending(target);
   } catch (e) {
     // Site-redesign protection: don't throw beyond the page console, just show a toast
-    console.warn('[osu-mod-checklist] 读取 post 失败，站点结构可能已变化', e);
+    console.warn('[sloppy-mod-checklist] 读取 post 失败，站点结构可能已变化', e);
     showToast(t('content.siteChanged'), 'error');
     button.removeAttribute('data-mc-ready');
   }
@@ -287,7 +287,7 @@ function ensureFab(): void {
         showToast(t('content.openFailed'), 'error');
       });
     } catch (e) {
-      console.warn('[osu-mod-checklist] sendMessage 失败', e);
+      console.warn('[sloppy-mod-checklist] sendMessage 失败', e);
     }
   });
 
@@ -334,7 +334,7 @@ function scheduleSweep(delay = 250): void {
     try {
       injectPostButtons();
     } catch (e) {
-      console.warn('[osu-mod-checklist] sweep 失败', e);
+      console.warn('[sloppy-mod-checklist] sweep 失败', e);
     }
   }, delay);
 }
@@ -370,7 +370,7 @@ function main(): void {
 
   const count = safeQueryAll(document, SELECTORS.discussion).length;
   console.info(
-    `[osu-mod-checklist] content script ready（识别到 ${count} 条 discussion` +
+    `[sloppy-mod-checklist] content script ready（识别到 ${count} 条 discussion` +
       (count === 0 ? '；若站点已改版请更新 locators.ts' : '') +
       '）',
   );

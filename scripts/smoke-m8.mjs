@@ -415,6 +415,52 @@ for (let i = 0; i < 40; i++) {
   if (await exists('[data-panel="data"]')) break;
 }
 
+// ---------------------------------------------------------------- About card
+
+/**
+ * The About card at the bottom of the settings page.
+ *
+ * The hrefs are pinned here because a mistyped one is invisible: the link renders, it just
+ * goes somewhere wrong (or nowhere). It already happened once while writing it.
+ */
+const about = await evaluate(`(() => {
+  const box = document.querySelector('[data-panel="about"]');
+  if (!box) return null;
+  return {
+    text: box.innerText.replace(/\\s+/g, ' ').trim(),
+    hrefs: [...box.querySelectorAll('a')].map((a) => a.getAttribute('href')),
+    // The attribution note is the small print, one step below the panel body.
+    noteSize: parseFloat(getComputedStyle(box.querySelector('.panel__note')).fontSize),
+    bodySize: parseFloat(getComputedStyle(box.querySelector('.panel__body')).fontSize),
+  };
+})()`);
+check('设置页最下面有「关于」卡片', about !== null, JSON.stringify(about));
+check(
+  '关于卡片里有作者与 license',
+  /flower-iroseka/.test(about?.text ?? '') && /MIT/.test(about?.text ?? ''),
+  about?.text,
+);
+check(
+  '关于卡片声明了 vibe coding',
+  /DeepSeek V4/.test(about?.text ?? ''),
+  about?.text,
+);
+check(
+  '三个链接指对了地方',
+  JSON.stringify(about?.hrefs) ===
+    JSON.stringify([
+      'https://github.com/flower-iroseka/sloppy-modding-checklist-ext',
+      'https://osu.ppy.sh/users/6485263',
+      'https://electoz.s-ul.eu/N7Y53Jaj',
+    ]),
+  JSON.stringify(about?.hrefs),
+);
+check(
+  '出处的说明用的是更小的字号',
+  typeof about?.noteSize === 'number' && about.noteSize < about.bodySize,
+  `${about?.noteSize}px vs ${about?.bodySize}px`,
+);
+
 const ANNOUNCE = '[data-announce]';
 // The data panel: two, "result" + "failure"; the sync panel has one more than that -- the
 // conflict entry stands on its own (it has a question to say, not the result of an action).

@@ -198,19 +198,19 @@ function setup(opts: { files?: Map<string, FakeFile>; permission?: FolderPermiss
 
 // ---------------------------------------------------------------- Config
 
-describe('本地同步文件夹 · isConfigured', () => {
-  it('选了文件夹才算配好', () => {
+describe('local sync folder · isConfigured', () => {
+  it('only counts as configured once a folder is picked', () => {
     const { provider } = setup();
     expect(provider.isConfigured({ enabled: true, folderName: 'MyDrive' })).toBe(true);
   });
 
-  it('没选文件夹 / 名字是空白 → 没配好', () => {
+  it('no folder picked / blank name -> not configured', () => {
     const { provider } = setup();
     expect(provider.isConfigured({ enabled: true })).toBe(false);
     expect(provider.isConfigured({ enabled: true, folderName: '   ' })).toBe(false);
   });
 
-  it('关掉了 → 没配好（哪怕名字还在）', () => {
+  it('turned off -> not configured (even if the name is still there)', () => {
     const { provider } = setup();
     expect(provider.isConfigured({ enabled: false, folderName: 'MyDrive' })).toBe(false);
   });
@@ -218,25 +218,25 @@ describe('本地同步文件夹 · isConfigured', () => {
 
 // ---------------------------------------------------------------- Test connection
 
-describe('本地同步文件夹 · test', () => {
-  it('文件夹打得开 + 权限在 → 通过', async () => {
+describe('local sync folder · test', () => {
+  it('the folder opens and permission is granted -> passes', async () => {
     const { provider, cfg } = setup();
     await expect(provider.test(cfg)).resolves.toBeUndefined();
   });
 
   // On the first sync the file obviously doesn't exist -- that's not a failure, and
   // treating it as one would lock everyone out.
-  it('文件还没上传过 → 仍然算通过（只是远端还没有）', async () => {
+  it('the file has not been uploaded yet -> still passes (the remote just has nothing yet)', async () => {
     const { provider, cfg } = setup();
     await expect(provider.test(cfg)).resolves.toBeUndefined();
   });
 
-  it('没有 folderName → 让用户去选文件夹', async () => {
+  it('no folderName -> send the user to pick a folder', async () => {
     const { provider } = setup();
     await expect(provider.test({ enabled: true })).rejects.toThrow(/还没有选择同步文件夹/);
   });
 
-  it('句柄丢了（扩展数据被清过）→ 让用户重新选，而不是说「连接正常」', async () => {
+  it('the handle is gone (extension data was cleared) -> ask the user to pick again, not say "connection is fine"', async () => {
     const s = setup();
     s.dropHandle();
     const err = await s.provider.test(s.cfg).catch((e: Error) => e as SyncError);
@@ -244,12 +244,12 @@ describe('本地同步文件夹 · test', () => {
     expect((err as Error).message).toMatch(/重新选择/);
   });
 
-  it('权限退回了 prompt → 指向「重新授权」那个按钮', async () => {
+  it('permission fell back to prompt -> point at the "re-authorize" button', async () => {
     const s = setup({ permission: 'prompt' });
     await expect(s.provider.test(s.cfg)).rejects.toThrow(/重新授权/);
   });
 
-  it('权限被拒 → 说清是「拒绝」，并给出站点设置这条后路', async () => {
+  it('permission denied -> say "denied" plainly, and offer site settings as the way out', async () => {
     const s = setup({ permission: 'denied' });
     await expect(s.provider.test(s.cfg)).rejects.toThrow(/拒绝/);
   });
@@ -257,13 +257,13 @@ describe('本地同步文件夹 · test', () => {
 
 // ---------------------------------------------------------------- Read
 
-describe('本地同步文件夹 · read', () => {
-  it('文件不存在 → 返回 null（不是错误）', async () => {
+describe('local sync folder · read', () => {
+  it('the file is missing -> returns null (not an error)', async () => {
     const { provider, cfg } = setup();
     await expect(provider.read(cfg)).resolves.toBeNull();
   });
 
-  it('读回 JSON 与 lastModified（冲突判定要用它）', async () => {
+  it('reads back the JSON and lastModified (conflict detection needs it)', async () => {
     const files = new Map([[FILE, { json: '{"a":1}', mtime: 1712345678000 }]]);
     const { provider, cfg } = setup({ files });
     const doc = await provider.read(cfg);
@@ -271,7 +271,7 @@ describe('本地同步文件夹 · read', () => {
     expect(doc?.modifiedAt).toBe(1712345678000);
   });
 
-  it('权限不够时读不了，也不需要去碰文件', async () => {
+  it('cannot read without permission, and does not need to touch the file', async () => {
     const s = setup({ permission: 'prompt' });
     await expect(s.provider.read(s.cfg)).rejects.toThrow(/重新授权/);
   });
@@ -279,15 +279,15 @@ describe('本地同步文件夹 · read', () => {
 
 // ---------------------------------------------------------------- Write
 
-describe('本地同步文件夹 · write', () => {
-  it('文件不存在就建一个，写完 close（close 才真正落盘）', async () => {
+describe('local sync folder · write', () => {
+  it('creates the file if missing, then closes (close is what really flushes to disk)', async () => {
     const { provider, cfg, world } = setup();
     await provider.write(cfg, '{"x":2}');
     expect(world.closed).toBe(1);
     expect(world.files.get(FILE)?.json).toBe('{"x":2}');
   });
 
-  it('文件已存在就覆盖', async () => {
+  it('overwrites when the file already exists', async () => {
     const files = new Map([[FILE, { json: '{"old":1}', mtime: 1 }]]);
     const { provider, cfg, world } = setup({ files });
     await provider.write(cfg, '{"new":2}');
@@ -296,7 +296,7 @@ describe('本地同步文件夹 · write', () => {
 
   // A half-written file is worse than no file: the other device would read invalid JSON
   // and report a parse error that has nothing to do with the real cause (disk / permission).
-  it('写到一半失败 → abort，把文件还原成写入前的样子', async () => {
+  it('a failure midway -> abort, restoring the file to what it was before the write', async () => {
     const files = new Map([[FILE, { json: '{"old":1}', mtime: 1 }]]);
     const s = setup({ files });
     s.world.failClose(new Error('disk full'));
@@ -306,13 +306,13 @@ describe('本地同步文件夹 · write', () => {
     expect(s.world.files.get(FILE)?.json).toBe('{"old":1}');
   });
 
-  it('建文件时被拒（NotAllowedError）→ 指向「重新授权」', async () => {
+  it('denied while creating (NotAllowedError) -> point at "re-authorize"', async () => {
     const s = setup();
     s.world.failGetWith(FILE, domError('NotAllowedError'));
     await expect(s.provider.write(s.cfg, '{}')).rejects.toThrow(/重新授权/);
   });
 
-  it('文件被别的程序占着 → 标成可重试，别让用户去改配置', async () => {
+  it('the file is held by another program -> mark it retryable, do not send the user to the config', async () => {
     const s = setup();
     s.world.failOpen(domError('NoModificationAllowedError'));
     const err = (await s.provider.write(s.cfg, '{}').catch((e: Error) => e)) as SyncError;
@@ -323,7 +323,7 @@ describe('本地同步文件夹 · write', () => {
 
   // Something with that name is a directory -- the user most likely picked the wrong folder
   // by accident, and the error should say so.
-  it('那个名字被一个文件夹占了 → 提示换文件夹', async () => {
+  it('a folder took that name -> suggest a different folder', async () => {
     const s = setup();
     s.world.failGetWith(FILE, domError('TypeMismatchError'));
     await expect(s.provider.write(s.cfg, '{}')).rejects.toThrow(/换一个同步文件夹/);
@@ -332,22 +332,22 @@ describe('本地同步文件夹 · write', () => {
 
 // ---------------------------------------------------------------- Wired into the registry
 
-describe('本地同步文件夹 · 注册表', () => {
+describe('local sync folder · registry', () => {
   // Being first = the default option the settings page gives new users (`SyncPanel` takes
   // `PROVIDER_CATALOG[0]`). This isn't an arbitrary order: the other four all require the
   // user to go register / configure something elsewhere first, and only this one doesn't.
-  it('它是目录里的第一项，也就是新用户看到的默认同步方式', () => {
+  it('it is the first entry in the catalog, i.e. the default sync method a new user sees', () => {
     expect(PROVIDER_CATALOG[0].id).toBe('localFolder');
   });
 
-  it('它在目录里没有 origins —— 一个 host 权限都不该要', () => {
+  it('it has no origins in the catalog -- it should ask for zero host permissions', () => {
     const desc = catalogEntry('localFolder');
     expect(desc).toBeDefined();
     expect(desc?.origins).toBeUndefined();
     expect(desc?.oauth).toBeUndefined();
   });
 
-  it('createProviders 真的把它造了出来，且能过一遍读写', async () => {
+  it('createProviders really does build it, and it gets through a read/write round', async () => {
     const providers = createProviders({
       fetch: (() => Promise.reject(new Error('不该发请求'))) as unknown as typeof fetch,
       launchWebAuthFlow: async () => undefined,
@@ -385,7 +385,7 @@ describe('本地同步文件夹 · 注册表', () => {
 
 // ---------------------------------------------------------------- Combining with the sync flow
 
-describe('本地同步文件夹 · 接到 manager 上', () => {
+describe('local sync folder · wired up to the manager', () => {
   /**
    * Build a doc with one general-internal entry.
    *
@@ -439,7 +439,7 @@ describe('本地同步文件夹 · 接到 manager 上', () => {
   // The manager-side logic is already tested (sync-manager.test.ts); these two prove one
   // thing: that logic holds just as well for "remote = a local folder", with no special
   // case needed for it.
-  it('本地更新 → 内容真的落到那个文件夹里的 JSON 上', async () => {
+  it('a local update -> the content really lands in the JSON file in that folder', async () => {
     const files = new Map<string, FakeFile>();
     const d = makeDeps(files, doc(2, 'hello'));
     expect((await runPush(d.deps)).action).toBe('push');
@@ -450,7 +450,7 @@ describe('本地同步文件夹 · 接到 manager 上', () => {
     expect(onDisk.cells['general-internal'][0].summary).toBe('hello');
   });
 
-  it('拉取读的就是文件夹里那一份', async () => {
+  it('a pull reads exactly the copy in the folder', async () => {
     const files = new Map<string, FakeFile>();
     await runPush(makeDeps(files, doc(5, 'from-other-device')).deps);
 

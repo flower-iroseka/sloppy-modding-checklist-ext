@@ -170,7 +170,7 @@ function fill(
           // A placeholder that does not match the call site is a real bug (the template
           // has {count} but nothing passed it). Leaving `{count}` on screen and logging it
           // is easier to track down than quietly showing "undefined".
-          console.warn(`[i18n] ${key} 缺少参数 ${name}`);
+          console.warn(`[i18n] ${key} is missing the param ${name}`);
           return whole;
         }
         return renderParam(params[name], locale, markup);
@@ -304,7 +304,7 @@ export async function setLocale(next: LocaleSetting): Promise<void> {
   try {
     await writeKey(LOCALE_KEY, next);
   } catch (e) {
-    console.warn('[i18n] 语言设置写入失败', e);
+    console.warn('[i18n] failed to write the language setting', e);
   }
 }
 

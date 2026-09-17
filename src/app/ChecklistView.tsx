@@ -172,6 +172,7 @@ export function ChecklistView() {
         // author has to go away too, otherwise it sticks around forever as an orphan key.
         linkAuthors: input.linkAuthors ?? {},
         note: input.note,
+        difficulty: input.difficulty,
       });
       showToast(t('checklist.saved'));
     } else {
@@ -249,6 +250,7 @@ export function ChecklistView() {
                         defaults: {
                           scope: entry.scope,
                           source: entry.source,
+                          difficulty: entry.difficulty,
                           summary: entry.summary,
                           links: entry.links,
                           linkAuthors: entry.linkAuthors,

@@ -36,7 +36,7 @@ function check(label, ok, detail) {
 const list = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
 const target = list.find((t) => t.type === 'page');
 if (!target) {
-  console.error('没有可用的标签页');
+  console.error('no usable tab');
   process.exit(2);
 }
 const ws = new WebSocket(target.webSocketDebuggerUrl);
@@ -297,7 +297,7 @@ const sync = async (type, body = {}) => {
   // would come back as "no response from the background" -- a failure that looks like a
   // product bug but is really a typo in the test script.
   if (typeof type !== 'string' || !type.startsWith('mc:')) {
-    throw new Error(`smoke 脚本自己写错了：消息类型是 ${String(type)}（MSG 表里可能没有这一项）`);
+    throw new Error(`the smoke script itself is wrong: message type is ${String(type)} (probably not in the MSG table)`);
   }
   const payload = JSON.stringify({ type, ...body });
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -358,7 +358,7 @@ await dropStaleState();
 await goto(APP);
 await send('Page.bringToFront').catch(() => {});
 const hidden = await warnIfHidden(evaluate);
-console.log(`  标签页可见：${hidden ? '否（将退化）' : '是'}`);
+console.log(`  tab visible: ${hidden ? 'no (will fall back)' : 'yes'}`);
 
 await enterSettings();
 
@@ -367,48 +367,48 @@ const options = await evaluate(
   `[...document.querySelectorAll('#provider option')].map((o) => o.value)`,
 );
 check(
-  '同步方式选择器列出三家（顺序固定）',
+  'the sync method selector lists three providers (fixed order)',
   JSON.stringify(options) === JSON.stringify(['localFolder', 'webdav', 'dropbox']),
   JSON.stringify(options),
 );
 // The first item is selected by default, and the first item has to be the one that "needs no signup" -- that's the whole point of §7.7.
-check('刚从干净状态进来时显示的是本地同步文件夹那张卡片', await exists('.sync__folder-state'));
-check('并且没有露出 WebDAV 的表单', !(await exists('#dav-base')));
+check('coming from a clean state it shows the local sync folder card', await exists('.sync__folder-state'));
+check('and the WebDAV form is not showing', !(await exists('#dav-base')));
 
 // --- Switch to Dropbox (the first OAuth provider in the catalog) --------------------------------
 await setSelect('#provider', 'dropbox');
-check('切到 Dropbox → 出现它的 client_id 输入框', await exists('#oauth-dropbox-client'));
-check('切过去之后 WebDAV 的表单不再显示', !(await exists('#dav-base')));
+check('switching to Dropbox → its client_id input shows up', await exists('#oauth-dropbox-client'));
+check('the WebDAV form stops showing after the switch', !(await exists('#dav-base')));
 // Google Drive used to be the only one with `requiresSecret` (a "Web application" client
 // forces a secret). It was removed entirely on 2026-09-11, and the two remaining providers
 // are public clients with PKCE, so the secret can always be left blank.
-check('Dropbox 不强制 secret（公共客户端 + PKCE）', (await text('label[for="oauth-dropbox-secret"]')).includes('可留空'));
+check('Dropbox does not force a secret (public client + PKCE)', (await text('label[for="oauth-dropbox-secret"]')).includes('可留空'));
 
 // The redirect URL is the one thing the user has to copy by hand into another console, so it has to actually match.
 const redirect = await value('#oauth-dropbox-redirect');
 const expectedRedirect = await evaluate(`chrome.identity.getRedirectURL()`);
-check('重定向地址就是扩展自己的 chromiumapp.org 地址', redirect === expectedRedirect, redirect);
-check('重定向地址是 https 且带扩展 ID', redirect === `https://${extId}.chromiumapp.org/`, redirect);
+check("the redirect URL is the extension's own chromiumapp.org address", redirect === expectedRedirect, redirect);
+check('the redirect URL is https and carries the extension id', redirect === `https://${extId}.chromiumapp.org/`, redirect);
 
 // --- Signup guide -----------------------------------------------------------
 const guideHref = () =>
   evaluate(`document.querySelector('.sync__provider a[target="_blank"]')?.href ?? null`);
 check(
-  'Dropbox 卡片给出注册地址',
+  'the Dropbox card gives a signup URL',
   (await guideHref()) === 'https://www.dropbox.com/developers/apps',
   await guideHref(),
 );
-check('向导步骤不是空的', (await evaluate(`document.querySelectorAll('.sync__steps li').length`)) >= 3);
+check('the guide steps are not empty', (await evaluate(`document.querySelectorAll('.sync__steps li').length`)) >= 3);
 check(
-  '权限说明列出申请的 scope',
+  'the permission note lists the requested scopes',
   (await text('.sync__provider')).includes('files.content.write'),
 );
-check('并且说清了文件会落在哪儿（用户会去自己的网盘里找）', (await text('.sync__provider')).includes('/Apps/'));
+check('and it spells out where the file will land (the user will go looking in their own drive)', (await text('.sync__provider')).includes('/Apps/'));
 // One a user actually hit: you tick the Permissions box but never click Submit, and the auth
 // page just throws back "No scope requested can be granted for this app". The guide has to
 // call out Submit, or you get "I followed the steps and it still won't connect".
 check(
-  '向导点名「勾完要点 Submit」（Dropbox 最容易漏的一步）',
+  'the guide calls out "tick the box then click Submit" (the step most people miss with Dropbox)',
   (await text('.sync__steps')).includes('Submit'),
 );
 // The catalog uses the `**bold**` inline markup (i18n/richText.ts). The default render path
@@ -425,13 +425,13 @@ const markup = await evaluate(`(() => {
     bold: [...steps.querySelectorAll('strong')].map((e) => e.textContent.trim()),
   };
 })()`);
-check('向导里没有漏出来的 `**` 标记', !markup.text.includes('**'), markup.text.match(/\S*\*\*\S*/)?.[0]);
+check('no leaked `**` markup in the guide', !markup.text.includes('**'), markup.text.match(/\S*\*\*\S*/)?.[0]);
 // The check keys off the single word "Submit": both languages have it in their bolded part
-// (the Chinese one reads "勾完必须点页面底部的 Submit"), and the script doesn't pin the
+// (the Chinese catalog's sentence has it in bold too), and the script doesn't pin the
 // language (it follows the browser, and the debug profile is Chinese), so comparing a whole
 // English sentence would go red in a Chinese environment.
 check(
-  '该加粗的地方真的渲染成了 <strong>（不是把标记删掉了事）',
+  'the bold parts really render as <strong> (not just the markup being stripped)',
   markup.bold.some((t) => t.includes('Submit')),
   JSON.stringify(markup.bold),
 );
@@ -440,7 +440,7 @@ check(
 // swallows line breaks by default -- collapsing it into one paragraph is as good as not
 // showing it at all.
 check(
-  '错误提示的容器保留换行（多行的配置清单才读得下去）',
+  'the error container keeps line breaks (so a multi-line setup checklist stays readable)',
   (await evaluate(`(() => {
     const p = document.createElement('p');
     p.className = 'error-text';
@@ -452,9 +452,9 @@ check(
 );
 
 // --- Disabled buttons -----------------------------------------------------------
-// Locate by data-action: the "复制" button is in the same card, and selecting by `.btn` would pick up that one.
-check('client_id 空着时「保存并连接」是禁用的', await isDisabled('[data-action="connect"]'));
-check('并且明说缺什么', (await text('[data-role="oauth-actions"]')).includes('client_id'));
+// Locate by data-action: the "copy" button is in the same card, and selecting by `.btn` would pick up that one.
+check('the "save and connect" button is disabled while client_id is empty', await isDisabled('[data-action="connect"]'));
+check('and it says what is missing', (await text('[data-role="oauth-actions"]')).includes('client_id'));
 
 // --- Only one OAuth provider left (OneDrive was removed entirely on 2026-09-11) --------------------
 //
@@ -475,16 +475,16 @@ await setSettings({
 await goto(APP);
 await enterSettings();
 await setSelect('#provider', 'dropbox');
-check('切回 Dropbox 卡片读回自己那串 client_id', (await value('#oauth-dropbox-client')) === 'D-ID', await value('#oauth-dropbox-client'));
+check('switching back to the Dropbox card reads back its own client_id', (await value('#oauth-dropbox-client')) === 'D-ID', await value('#oauth-dropbox-client'));
 
 // --- Connection state -------------------------------------------------------------
-check('没写 token 时显示未连接', (await text('.sync__provider')).includes('未连接'));
+check('shows not connected when there is no token', (await text('.sync__provider')).includes('未连接'));
 
 await seedToken('dropbox');
 await sleep(400); // onTokensChanged is async
-check('写入 token 后立刻显示已连接', (await text('.sync__provider')).includes('已连接'));
-check('已连接时给的是「断开连接」，不再是「保存并连接」', await exists('[data-action="disconnect"]'));
-check('已连接后就没有 connect 按钮了', !(await exists('[data-action="connect"]')));
+check('shows connected right after a token is written', (await text('.sync__provider')).includes('已连接'));
+check('once connected it offers "disconnect", not "save and connect"', await exists('[data-action="disconnect"]'));
+check('no connect button once connected', !(await exists('[data-action="connect"]')));
 
 // --- Where the results show up (user request, 2026-09-11) --------------------------------
 //
@@ -510,42 +510,42 @@ const resultGeom = () => evaluate(`(() => {
 })()`);
 
 const beforeResult = await resultGeom();
-check('结果区在（那排按钮下面有一个专放结果的位置）', beforeResult !== null, JSON.stringify(beforeResult));
+check('the result area is there (a dedicated spot for results below that button row)', beforeResult !== null, JSON.stringify(beforeResult));
 check(
-  '结果区在三个按钮的下面',
+  'the result area sits below the three buttons',
   beforeResult?.belowActions === true,
   JSON.stringify(beforeResult),
 );
-check('默认是空的（不写占位文字）', beforeResult?.text === '', JSON.stringify(beforeResult));
+check('empty by default (no placeholder text)', beforeResult?.text === '', JSON.stringify(beforeResult));
 
 await click('[data-action="disconnect"]');
 await sleep(500);
 const afterResult = await resultGeom();
 check(
-  '点完按钮，那句话出现在这个位置里',
+  'after clicking the button, the sentence shows up in this spot',
   afterResult?.okText !== null && afterResult.okText.length > 0,
   JSON.stringify(afterResult),
 );
 check(
-  '预留的那一行是有高度的（不是「有结果才长出来」）',
+  'the reserved line has height (it does not only grow once there is a result)',
   typeof beforeResult?.h === 'number' && beforeResult.h > 0,
   String(beforeResult?.h),
 );
 check(
-  '有结果时高度不缩水（页面不抖）',
+  'the height does not shrink when there is a result (no page jitter)',
   typeof afterResult?.h === 'number' && afterResult.h >= (beforeResult?.h ?? 0),
   `${beforeResult?.h} → ${afterResult?.h}`,
 );
 check(
-  '结果区仍然在按钮下面',
+  'the result area is still below the buttons',
   afterResult?.belowActions === true,
   JSON.stringify(afterResult),
 );
 
-check('点断开 → 回到未连接', (await text('.sync__provider')).includes('未连接'), await text('.sync__provider'));
-check('断开只删 token，不动远端文件', (await tokens())?.dropbox === undefined, JSON.stringify(await tokens()));
+check('clicking disconnect → back to not connected', (await text('.sync__provider')).includes('未连接'), await text('.sync__provider'));
+check('disconnect only deletes the token, it does not touch the remote file', (await tokens())?.dropbox === undefined, JSON.stringify(await tokens()));
 check(
-  '断开之后 client_id 还在（不该顺手抹掉用户填过的配置）',
+  'client_id is still there after disconnecting (it should not wipe config the user filled in)',
   (await value('#oauth-dropbox-client')) === 'D-ID',
   await value('#oauth-dropbox-client'),
 );
@@ -562,21 +562,21 @@ const blankConfig = { dropbox: { enabled: true, clientId: '' } };
 await putSettings({ ...base, activeProvider: 'dropbox', config: blankConfig });
 await sleep(300);
 check(
-  '前置条件：client_id 是空的（填了的话这一段会弹出真的授权窗口）',
+  'precondition: client_id is empty (if it were filled in, this section would pop up a real auth window)',
   (await readSettings())?.config?.dropbox?.clientId === '',
   JSON.stringify((await readSettings())?.config),
 );
 
 const noClient = await sync(MSG.connect, { provider: 'dropbox' });
-check('没填 client_id 就去连接 → 明确说要先填', noClient?.ok === false && /client_id/.test(noClient.text), noClient?.text);
+check('connecting without a client_id → it says plainly to fill it in first', noClient?.ok === false && /client_id/.test(noClient.text), noClient?.text);
 check(
-  '并且那条消息是 SW 正常回的（不是端口提前关闭）',
+  'and that message came back from the SW normally (the port did not close early)',
   typeof noClient?.text === 'string' && !/后台没有响应/.test(noClient.text),
   noClient?.text,
 );
 
 const notOAuth = await sync(MSG.connect, { provider: 'webdav' });
-check('对 WebDAV 发起 OAuth 连接 → 说它不是 OAuth 端', notOAuth?.ok === false && /OAuth/.test(notOAuth.text), notOAuth?.text);
+check('starting an OAuth connect against WebDAV → it says that is not an OAuth endpoint', notOAuth?.ok === false && /OAuth/.test(notOAuth.text), notOAuth?.text);
 
 // Config filled in but no token: that's the real state of "reachable but not authorized yet".
 await putSettings({
@@ -587,14 +587,14 @@ await putSettings({
 await sleep(300);
 const noToken = await sync(MSG.test);
 check(
-  '没连接就测试连接 → 叫人去设置页点连接，而不是甩一个 401',
+  'testing the connection while not connected → it tells you to go click connect on the settings page, not just a 401',
   noToken?.ok === false && /还没有连接/.test(noToken.text),
   noToken?.text,
 );
 
 const noTokenPush = await sync(MSG.push, {});
 check(
-  '没连接就上传 → 同样是一句人话（异常没被结构化克隆吞掉）',
+  'uploading while not connected → also a readable sentence (the exception was not swallowed by structured clone)',
   noTokenPush?.ok === false && noTokenPush.text.length > 6,
   noTokenPush?.text,
 );
@@ -603,7 +603,7 @@ await putSettings({ ...base, activeProvider: null, config: blankConfig });
 await sleep(300);
 const noProvider = await sync(MSG.test);
 check(
-  '还没选同步方式 → 提示去选一个',
+  'no sync method picked yet → it asks you to pick one',
   noProvider?.ok === false && /没有选择同步方式/.test(noProvider.text),
   noProvider?.text,
 );
@@ -618,20 +618,20 @@ check(
 // don't match.
 const unknownMc = await sync('mc:nope-not-real');
 check(
-  'SW 不认识的 mc: 消息 → 明说「扩展可能没有重新加载」，而不是一声不吭',
+  'an mc: message the SW does not know → it says "the extension may not have been reloaded" instead of staying silent',
   unknownMc?.ok === false && /没有重新加载/.test(unknownMc.text),
   unknownMc?.text,
 );
 
 const foreign = await evaluate(`chrome.runtime.sendMessage({ type: 'not-ours' })`);
-check('不是 mc: 前缀的消息 → 仍然不理（不替别人回话）', foreign === undefined, String(foreign));
+check('a message without the mc: prefix → still ignored (it does not answer for others)', foreign === undefined, String(foreign));
 
 // --- Manifest: the origins are really granted, and nothing extra ---------------------------------
 const granted = await evaluate(
   `chrome.permissions.contains({ origins: [
     'https://api.dropboxapi.com/*', 'https://content.dropboxapi.com/*'] })`,
 );
-check('Dropbox 用到的域已经授予（写进了 host_permissions）', granted === true, String(granted));
+check('the domains Dropbox uses are granted (written into host_permissions)', granted === true, String(granted));
 
 // After OneDrive was removed, its three origins have to really disappear from the permission
 // set. Leaving one unused permission behind makes that "read and change all your data on all
@@ -644,7 +644,7 @@ const oneDriveGone = await evaluate(
     'https://graph.microsoft.com/*', 'https://login.microsoftonline.com/*',
     'https://*.sharepoint.com/*'] })`,
 );
-check('OneDrive 的三个域已经不再申请', oneDriveGone === false, String(oneDriveGone));
+check("OneDrive's three origins are no longer requested", oneDriveGone === false, String(oneDriveGone));
 
 // After Google Drive was cut, these three origins must really be gone from the manifest --
 // leaving one unused permission behind makes that "read and change all your data on all
@@ -655,12 +655,12 @@ const googleGone = await evaluate(
   `chrome.permissions.contains({ origins: [
     'https://www.googleapis.com/*', 'https://oauth2.googleapis.com/*', 'https://accounts.google.com/*'] })`,
 );
-check('Google 的三个域已经不再申请', googleGone === false, String(googleGone));
+check("Google's three origins are no longer requested", googleGone === false, String(googleGone));
 
 const overGranted = await evaluate(
   `chrome.permissions.contains({ origins: ['https://example.com/*'] })`,
 );
-check('没有顺手把别的域也授予（不是「什么都能连」）', overGranted === false, String(overGranted));
+check('no extra origins got granted along the way (it is not "connect to anything")', overGranted === false, String(overGranted));
 
 // --- Local sync folder: end-to-end with no requests at all -------------------------
 //
@@ -679,17 +679,17 @@ await wipeFolder(DIR);
 
 await setSelect('#provider', 'localFolder');
 check(
-  '切到本地同步文件夹 → 明说还没有选文件夹',
+  'switching to the local sync folder → it says plainly that no folder is picked yet',
   (await text('.sync__folder-state')).includes('还没有选择文件夹'),
   await text('.sync__folder-state'),
 );
-check('没选文件夹时上传按钮是禁用的', await isDisabled('[data-action="sync-push"]'));
+check('the upload button is disabled when no folder is picked', await isDisabled('[data-action="sync-push"]'));
 check(
-  '并且说清了缺什么',
+  'and it spells out what is missing',
   (await text('[data-role="sync-actions"]')).includes('请先选择同步文件夹'),
   await text('[data-role="sync-actions"]'),
 );
-check('卡片上只有「选择文件夹」，没有「断开」（还没得断）', !(await exists('[data-action="forget-folder"]')));
+check('the card only has "pick a folder", no "disconnect" (there is nothing to disconnect yet)', !(await exists('[data-action="forget-folder"]')));
 
 await seedFolderHandle(DIR);
 await putSettings({
@@ -699,20 +699,20 @@ await putSettings({
 await goto(APP);
 await enterSettings();
 await setSelect('#provider', 'localFolder');
-check('选过之后卡片显示出文件夹名字', (await text('.sync__folder-state')).includes(DIR), await text('.sync__folder-state'));
-check('权限在 → 不显示「重新授权」', !(await exists('[data-action="reauth-folder"]')));
-check('这时有「断开」了', await exists('[data-action="forget-folder"]'));
-check('上传按钮可用了', !(await isDisabled('[data-action="sync-push"]')));
+check('after picking, the card shows the folder name', (await text('.sync__folder-state')).includes(DIR), await text('.sync__folder-state'));
+check('permission present → no "re-authorize"', !(await exists('[data-action="reauth-folder"]')));
+check('now there is a "disconnect"', await exists('[data-action="forget-folder"]'));
+check('the upload button is usable now', !(await isDisabled('[data-action="sync-push"]')));
 
 const folderTest = await sync(MSG.test);
 check(
-  '测试连接（文件夹在 + 权限在）→ 通过，且不建任何临时文件',
+  'test connection (folder present + permission present) → passes, and creates no temp files',
   folderTest?.ok === true,
   JSON.stringify(folderTest),
 );
 
 const folderPush = await sync(MSG.push, {});
-check('上传到本地文件夹 → 成功', folderPush?.ok === true, JSON.stringify(folderPush));
+check('upload to the local folder → succeeds', folderPush?.ok === true, JSON.stringify(folderPush));
 
 const onDisk = await readFolderFile(DIR);
 let parsed = null;
@@ -721,9 +721,9 @@ try {
 } catch {
   parsed = null;
 }
-check('文件真的落到了那个文件夹里，而且是合法 JSON', parsed !== null, String(onDisk).slice(0, 120));
+check('the file really landed in that folder and is valid JSON', parsed !== null, String(onDisk).slice(0, 120));
 check(
-  '落盘的内容就是这份 checklist（有 deviceId 和 updatedAt）',
+  'what landed on disk is this checklist (it has deviceId and updatedAt)',
   typeof parsed?.deviceId === 'string' && typeof parsed?.updatedAt === 'number',
   JSON.stringify(parsed && Object.keys(parsed)),
 );
@@ -731,7 +731,7 @@ check(
 // The content matches -> pulling again should decide "nothing to sync" (not a wasted transfer, and not an error).
 const folderPull = await sync(MSG.pull, {});
 check(
-  '再拉一次 → 判定无需同步（两边内容一致）',
+  'pulling again → judged nothing to sync (both sides match)',
   folderPull?.ok === true && /无需同步|一致|最新/.test(folderPull.text),
   JSON.stringify(folderPull),
 );
@@ -748,7 +748,7 @@ const ahead = { ...parsed, updatedAt: Date.now() + 60_000 };
 await writeFolderFile(DIR, JSON.stringify(ahead));
 const pullAhead = await sync(MSG.pull, {});
 check(
-  '远端更新 → 拉取会走冲突/采用远端那条路，而不是默默忽略',
+  'remote updated → the pull goes down the conflict / use-the-remote path instead of silently ignoring it',
   pullAhead?.ok === true,
   JSON.stringify(pullAhead),
 );
@@ -757,7 +757,7 @@ check(
 await clearFolderHandleInPage();
 const noHandle = await sync(MSG.test);
 check(
-  '句柄丢了 → 明说「重新选择」，而不是「连接正常」',
+  'handle gone → it says "pick it again" instead of "the connection is fine"',
   noHandle?.ok === false && /重新选择/.test(noHandle.text),
   JSON.stringify(noHandle),
 );
@@ -781,7 +781,7 @@ const alarmNames = () =>
 await putSettings({ autoSync: false, activeProvider: null, config: {}, strategy: 'newest-wins' });
 await evaluate(`chrome.alarms.clearAll()`);
 await sleep(200);
-check('没开自动上传时，一个同步闹钟都不挂', (await alarmNames()).length === 0, JSON.stringify(await alarmNames()));
+check('with auto upload off, no sync alarm is set at all', (await alarmNames()).length === 0, JSON.stringify(await alarmNames()));
 
 await putSettings({
   autoSync: true,
@@ -791,7 +791,7 @@ await putSettings({
 });
 await sleep(200);
 check(
-  '开了自动上传 → 挂上 60 分钟的定时拉取',
+  'auto upload on → a 60-minute periodic pull alarm is armed',
   (await alarmNames()).includes('mc-sync-periodic'),
   JSON.stringify(await alarmNames()),
 );
@@ -804,7 +804,7 @@ await evaluate(`(async () => {
 })()`);
 await sleep(250);
 check(
-  '本地数据一变 → 排上一次自动上传（30 秒防抖的闹钟）',
+  'local data changes → an auto upload is scheduled (the 30-second debounce alarm)',
   (await alarmNames()).includes('mc-sync-autopush'),
   JSON.stringify(await alarmNames()),
 );
@@ -837,7 +837,7 @@ await evaluate(`(async () => {
 })()`);
 await sleep(250);
 check(
-  '（对照）同样是这套设置，用户真改了数据 → 排上自动上传',
+  '(control) with the same settings, a real user change → an auto upload is scheduled',
   (await alarmNames()).includes('mc-sync-autopush'),
   JSON.stringify(await alarmNames()),
 );
@@ -856,13 +856,13 @@ await writeFolderFile(DIR, remoteAhead);
 
 const pullForAutoPush = await sync(MSG.pull, {});
 check(
-  '（前置）这次拉取确实采纳了远端 —— 否则下面那条测不到任何写入',
+  '(precondition) this pull really took the remote -- otherwise the check below measures no write at all',
   pullForAutoPush?.ok === true && /已采用远端/.test(pullForAutoPush.text),
   JSON.stringify(pullForAutoPush),
 );
 await sleep(300);
 check(
-  '拉取写回的本地内容**不会**再排一次上传',
+  'local content written back by a pull **does not** schedule another upload',
   !(await alarmNames()).includes('mc-sync-autopush'),
   JSON.stringify(await alarmNames()),
 );
@@ -876,7 +876,7 @@ await putSettings({
 });
 await sleep(250);
 check(
-  '关掉自动上传 → 两个闹钟都撤掉（不留一个不会做事的）',
+  'auto upload off → both alarms are cleared (nothing left behind that will never do anything)',
   (await alarmNames()).length === 0,
   JSON.stringify(await alarmNames()),
 );
@@ -885,9 +885,9 @@ check(
 
 console.log('');
 if (failures.length === 0) {
-  console.log('全部通过（未联网；真实授权流程见 §12.3 的手动 QA）');
+  console.log('all passed (no network; for the real auth flow see the manual QA in §12.3)');
 } else {
-  console.log(`${failures.length} 项失败：`);
+  console.log(`${failures.length} checks failed:`);
   for (const f of failures) console.log(`  - ${f}`);
 }
 ws.close();

@@ -2,9 +2,9 @@
 
 **English** | [中文](README.zh.md)
 
-Collect everything that needs checking on a beatmap into one list, on osu!'s beatmap discussion pages.
+Collects everything that needs checking on a beatmap into one list, on osu!'s beatmap discussion pages.
 
-Use it before applying for BN to work out what still needs looking at on a map, so nothing gets missed; day to day it also works as an ordinary modding checklist — write down what you find, one line at a time, and improve your modding.
+Use it before applying for BN to work out what still needs checking on a map. It also works as a general modding checklist.
 
 The list is sorted along two axes:
 
@@ -13,7 +13,9 @@ The list is sorted along two axes:
 
 Put the two together and you get four cells.
 
-The idea comes from Electoz's [Advanced Modding Guide](https://electoz.s-ul.eu/N7Y53Jaj) (19 April 2020). This extension turns that list into a browser tool: one click to fill in, and it syncs across devices.
+Individual entries also carry a **difficulty**: Easy, Normal, Hard, Insane or Expert. Most mods only apply to one tier, so this says which one the entry is about. It's filled in for you when you add an entry from a discussion page.
+
+The idea comes from Electoz's [Advanced Modding Guide](https://electoz.s-ul.eu/N7Y53Jaj) (19 April 2020). This extension implements that list as a browser extension, and can sync it across devices.
 
 ---
 
@@ -31,7 +33,7 @@ Then in the browser:
 1. Open `chrome://extensions` and turn on "Developer mode" in the top right;
 2. Click "Load unpacked" and pick the **`dist/`** directory (not the repository root).
 
-After changing code, rebuild and click "Reload" once on the extensions page.
+After changing code, rebuild and click "Reload" on the extensions page. Changes under `src/content/` are the exception: Chrome keeps the content script from the previous load, so restart the browser instead.
 
 ---
 
@@ -39,9 +41,11 @@ After changing code, rebuild and click "Reload" once on the extensions page.
 
 ### 1. Adding entries on a discussion page
 
-Open any beatmap discussion page (`https://osu.ppy.sh/beatmapsets/<id>/discussion*`). Every post gets a "＋ Add to Checklist" button next to it; clicking it puts that change on the list.
+Open any beatmap discussion page (`https://osu.ppy.sh/beatmapsets/<id>/discussion*`). Every post gets an "+ Add to Checklist" button next to it, which adds an entry for that post.
 
 To see the list, click the floating button in the bottom left corner to open the Checklist page.
+
+When the page is about one specific difficulty, the entry's difficulty is filled in from that difficulty's name (matched against the [osu! wiki's naming tables](https://osu.ppy.sh/wiki/en/Ranking_criteria/Difficulty_naming), including the naming schemes borrowed from other rhythm games), or from its star rating when the name isn't one the wiki lists. You can change it in the dialog, or clear it by clicking the selected tier again.
 
 ### 2. Checking the stats
 
@@ -55,7 +59,9 @@ The page is split into four cells along the two axes above, and the entries in e
 - **Dragging into another cell**: changes that entry's scope and source (General to Individual, say);
 - **Keyboard shortcut**: press `Tab` to select the `⋮⋮` handle on the left of a card, press `Space` to pick the card up, use the arrow keys to move it to the target position, then press `Space` to drop it; press `Esc` to cancel the drag.
 
-A card has three icons in its top right corner: edit, add a note, delete. Deleting asks for confirmation.
+A card has two icon buttons in its top right corner: edit and delete. The note button sits at the right end of the row below, next to the links. Deleting asks for confirmation: the first click turns the button into "Confirm", and a second click within three seconds deletes the entry.
+
+An Individual card with a difficulty shows it next to the summary, with a small bar in osu!'s colour for that tier. A card with no tier shows nothing. General cards never show one: moving an entry over to the General column hides its marker without throwing the value away, so moving it back brings the marker back.
 
 ### 4. Changing the UI language
 
@@ -104,31 +110,44 @@ When the authorization page errors out, the extension cannot read the error text
 
 ### When sync runs
 
-- **Auto-upload** (off by default): once on, every local change is uploaded **30 seconds** later, plus a pull once an hour.
-- **Pull when the extension opens** (off by default): pulls once when the Checklist page opens, and skips it if a pull happened within the last ten minutes.
+- **Auto-upload (upload after changes, pull once an hour)**, off by default: once on, every local change is uploaded **30 seconds** later, and a pull runs once an hour.
+- **Pull when the extension opens**, off by default: pulls once when the background service worker starts — on browser start, and on extension install, update or reload. It is skipped if a sync succeeded within the last ten minutes.
 
-Both switches are in Settings.
+Both switches are in Settings. The second one only takes effect while Auto-upload is on; with Auto-upload off, it does nothing.
 
 ### Handling conflicts
 
-When both devices have changed things and the remote has an update from another device, the extension asks before overwriting. The "Conflict strategy" in Settings decides when it asks:
+Each copy carries an `updatedAt` timestamp, and that is what the extension compares.
+
+On a **pull** (a pull from Settings, the hourly pull, or a pull when the extension opens):
+
+- the remote is newer → the remote copy is taken;
+- the local copy is newer → nothing happens;
+- the timestamps are equal but the content differs → the conflict strategy decides.
+
+On a **push** ("Upload now", or an automatic upload):
+
+- the remote is newer → the extension asks before overwriting, unless the strategy is "Local wins";
+- otherwise → the remote is overwritten with the local copy.
+
+The "Conflict strategy" in Settings decides only the two cases left open above — a pull with equal timestamps, and a push with a newer remote:
 
 | Option | Meaning |
 | --- | --- |
-| Newest timestamp wins | Default. When both sides have updates, `updatedAt` decides; the newer one is used |
-| Local wins | Always use the local copy and overwrite the remote |
-| Remote wins | Always use the remote copy and overwrite the local one |
-| Always ask | Confirm before every change |
+| Newest timestamp wins | Default. On a pull with equal timestamps, take the remote copy |
+| Local wins | On a pull with equal timestamps, keep the local copy; on a push, overwrite a newer remote without asking |
+| Remote wins | On a pull with equal timestamps, take the remote copy |
+| Always ask | On a pull with equal timestamps, ask which side to take |
 
-With "Always ask", or when the extension cannot tell which side is newer, Settings shows a conflict panel offering three options: keep local / take remote / merge both. **A backup is taken automatically before overwriting the remote** (the five most recent are kept, for the local copy and the remote separately).
+When the extension asks, Settings shows a conflict panel. A pull conflict offers three choices: "Keep local", "Take remote" and "Merge both". A push conflict offers two: "Overwrite with local anyway" or "Cancel". **A backup is taken automatically before the remote is overwritten** (the five most recent are kept, for the local copy and the remote separately).
 
 ---
 
 ## Where the data lives, and privacy
 
 - **The list** is stored in the browser's `chrome.storage.local`. Manual backups, switching browsers and switching machines all go through export / import in the "Data" panel in Settings — that is a single JSON file.
-- **The Dropbox token** is stored in the same `storage.local`, and **never goes into the exported JSON**.
-- **client_id / client_secret** are only used inside the extension's service worker to exchange for a token; the page code never gets hold of the credentials, nor the token.
+- **The Dropbox token** is stored in the same `storage.local`, and **never goes into the exported JSON**. Only the service worker reads it; the pages are told whether a connection exists, not the token itself.
+- **client_id / client_secret** are entered on the Settings page and saved in `storage.local` with the rest of the settings. The service worker uses them to exchange for a token. The Dropbox app used here is a public client, so `client_secret` can be left empty.
 - The extension sends requests to **only** these domains. The WebDAV server address is yours to fill in, so its domain is requested separately the first time you save.
 - There is no telemetry, and nothing else receives your data: the author has no server.
 
@@ -139,7 +158,7 @@ https://api.dropboxapi.com/*
 https://content.dropboxapi.com/*
 ```
 
-(`https://osu.ppy.sh/*` is the content script reading posts; the other three are Dropbox's: the authorization page, the RPC API, and file upload/download.)
+(`https://osu.ppy.sh/*` is for reading the author behind a discussion permalink; the content script itself is injected through the manifest's `content_scripts`. The other three are Dropbox's: the authorization page, the RPC API, and file upload/download.)
 
 ---
 
@@ -165,7 +184,7 @@ npm run build:content    # content script only
 
 `build:pages` wipes the whole `dist/` first, so after running it alone, run `build:content` again.
 
-Real-browser checks use the smoke scripts under `scripts/`: they drive a real Chrome loaded with `dist/` over CDP, one file per milestone (`smoke-m1.mjs` … `smoke-m9.mjs`).
+Real-browser checks use the scripts under `scripts/`: they drive a real Chrome loaded with `dist/` over CDP. Most are named after the milestone they cover (`smoke-m1.mjs` … `smoke-m9.mjs`, except that M7's checks are folded into `smoke-m6.mjs` and M0's are in `smoke-extension.mjs`); `smoke-author.mjs`, `smoke-links.mjs` and `probe-ui.mjs` cover individual features.
 
 ---
 

@@ -20,7 +20,7 @@
   --mc-font: Inter, 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
-/* The "添加到 Checklist" button on each post (inserted into .beatmap-discussion-post__actions-group) */
+/* The "+ Add to Checklist" button on each post (inserted into .beatmap-discussion-post__actions-group) */
 .mc-add-btn {
   border: 1px solid var(--mc-border);
   border-radius: 4px;

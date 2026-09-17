@@ -119,7 +119,7 @@ export interface SyncProvider {
    */
   isConfigured(cfg: ProviderConfig): boolean;
   /**
-   * "测试连接": reachable, authenticated, directory exists → resolve.
+   * "Test connection": reachable, authenticated, directory exists → resolve.
    *
    * @param cfg this provider's config
    * @throws {SyncError} any step didn't go through

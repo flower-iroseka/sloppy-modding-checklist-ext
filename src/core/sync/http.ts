@@ -10,7 +10,7 @@ import { SyncError } from './errors';
 
 /**
  * Self-hosted WebDAV and cloud drives can both hang without responding; without a timeout,
- * "测试连接" would spin forever.
+ * "Test connection" would spin forever.
  */
 export const TIMEOUT_MS = 20_000;
 

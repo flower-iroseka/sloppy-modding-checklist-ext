@@ -95,7 +95,7 @@ export function PopupApp() {
       ) : pageError ? (
         <p className="pu__hint pu__hint--error">{pageError}</p>
       ) : hydrated && total === 0 ? (
-        // No separate button for the empty state: right below is "打开 Checklist 页面", and
+        // No separate button for the empty state: right below is "Open the Checklist page", and
         // another button that looks the same would only make people think there are two different
         // paths. The copy explains both paths at once -- clicking the extension icon on a discussion
         // page grabs one directly, and the "+" on the page adds one by hand.

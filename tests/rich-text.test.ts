@@ -24,11 +24,11 @@ function rejoin(text: string): string {
 }
 
 describe('stripBold', () => {
-  it('去掉成对的标记，只留文字', () => {
+  it('removes paired markers, keeps the text', () => {
     expect(stripBold('点 **Submit** 才算数')).toBe('点 Submit 才算数');
   });
 
-  it('落单的标记照样去掉', () => {
+  it('an unpaired marker is removed too', () => {
     // Either the translator broke the pair or there was a lone `**` to begin with. Losing
     // the emphasis beats letting asterisks leak into the user's face: seeing "**Submit" is
     // much worse than not seeing bold.
@@ -36,39 +36,39 @@ describe('stripBold', () => {
     expect(stripBold('没配平的标记**')).toBe('没配平的标记');
   });
 
-  it('单个 `*` 不是我们的标记，不动它', () => {
+  it('a lone `*` is not our marker, leave it alone', () => {
     expect(stripBold('a * b **粗** c')).toBe('a * b 粗 c');
   });
 
-  it('没有标记时原样返回', () => {
+  it('returns the text unchanged when there is no marker', () => {
     expect(stripBold('一句普通的话')).toBe('一句普通的话');
   });
 });
 
 describe('splitBold', () => {
-  it('没有标记时只给一段、且不加粗', () => {
+  it('with no marker, one plain segment and no bold', () => {
     expect(splitBold('一句普通的话')).toEqual([{ text: '一句普通的话', bold: false }]);
   });
 
-  it('空串给空数组（`<RichText>` 据此渲染 null）', () => {
+  it('an empty string gives an empty array (`<RichText>` renders null for that)', () => {
     expect(splitBold('')).toEqual([]);
   });
 
-  it('句中加粗：切成三段', () => {
+  it('bold mid-sentence: cut into three segments', () => {
     expect(rejoin('勾完必须点 **Submit**，只勾不提交等于没配。')).toBe(
       '勾完必须点 <b>Submit</b>，只勾不提交等于没配。',
     );
   });
 
-  it('一句里有两处加粗', () => {
+  it('two bold runs in one sentence', () => {
     expect(rejoin('**甲**和**乙**')).toBe('<b>甲</b>和<b>乙</b>');
   });
 
-  it('整句加粗', () => {
+  it('the whole sentence bold', () => {
     expect(rejoin('**整句**')).toBe('<b>整句</b>');
   });
 
-  it('加粗在句首或句尾时不产生空段', () => {
+  it('bold at the start or end produces no empty segment', () => {
     // An empty segment makes `<RichText>` render an extra empty sibling node, which is
     // harmless in React, but it's a sign that the split went wrong -- so pin down here
     // that it never happens.
@@ -82,14 +82,14 @@ describe('splitBold', () => {
     ]);
   });
 
-  it('两处加粗中间隔着一个空段时不留空串', () => {
+  it('two bold runs separated by an empty segment leave no empty string', () => {
     expect(splitBold('**甲****乙**')).toEqual([
       { text: '甲', bold: true },
       { text: '乙', bold: true },
     ]);
   });
 
-  it('没配平的标记落在普通段里，会被顺手剥掉', () => {
+  it('an unpaired marker lands in a plain segment and gets stripped along the way', () => {
     // This is the division of labor between `splitBold` and `stripBold`: do the safety net
     // at the same time as the split, so a key going through RichText doesn't leak
     // asterisks because its markers were broken.
@@ -97,20 +97,20 @@ describe('splitBold', () => {
   });
 });
 
-describe('默认渲染路径永远不吐出标记（保底）', () => {
+describe('the default render path never emits markers (safety net)', () => {
   const KEY = 'help.dropbox.step2';
 
-  it('renderKey 剥掉标记', () => {
+  it('renderKey strips the markers', () => {
     expect(renderKey(KEY, undefined, 'zh')).not.toContain('**');
     expect(renderKey(KEY, undefined, 'en')).not.toContain('**');
   });
 
-  it('renderKeyMarkup 保留标记，给 `<RichText>` 切段', () => {
+  it('renderKeyMarkup keeps the markers, for `<RichText>` to split', () => {
     expect(renderKeyMarkup(KEY, undefined, 'zh')).toContain('**');
     expect(renderKeyMarkup(KEY, undefined, 'en')).toContain('**');
   });
 
-  it('两条路除了标记之外**一字不差**', () => {
+  it('the two paths agree **word for word** apart from the markers', () => {
     // Drift means "the text in the UI" and "the text in the README" start telling different
     // stories, and readme.test.ts compares the markup path.
     for (const key of ['help.dropbox.step1', 'help.dropbox.step2', 'err.folder.notAFile'] as const) {

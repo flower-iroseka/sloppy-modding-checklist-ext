@@ -58,27 +58,27 @@ for (const readme of READMES) {
       return renderMsgMarkup(msg, readme.locale);
     }
 
-    it('另一语言的 README 有链接指过来', () => {
+    it('the other language README is linked from here', () => {
       // The switcher line at the top. Without it the Chinese one is unreachable from GitHub.
       const other = readme.locale === 'en' ? 'README.zh.md' : 'README.md';
       contains(other);
     });
 
-    describe('OAuth 注册向导', () => {
+    describe('OAuth registration walkthrough', () => {
       // Loop over the providers instead of hardcoding Dropbox: add another OAuth provider
       // later and forget the README, and this goes red.
       for (const spec of OAUTH_SPECS) {
         describe(t(spec.displayName), () => {
-          it('注册地址与链接文字都在', () => {
+          it('both the registration URL and the link text are there', () => {
             contains(spec.help.consoleUrl);
             contains(spec.help.consoleLabel);
           });
 
-          it('每一步向导文案都逐字出现', () => {
+          it('every walkthrough step appears word for word', () => {
             for (const step of spec.help.steps) contains(tm(step));
           });
 
-          it('提醒（caution）逐字出现', () => {
+          it('the caution appears word for word', () => {
             // Only check when present: this step shouldn't fail just because a provider has no caution.
             if (spec.help.caution) contains(tm(spec.help.caution));
           });
@@ -86,31 +86,31 @@ for (const readme of READMES) {
           // This group matters most: they're the only thing users can check against when the
           // authorization page errors out. Miss one, and the user is stuck staring at an error
           // window with no way back.
-          it('每条经典配置坑（misconfig）都逐字出现', () => {
+          it('every classic misconfig appears word for word', () => {
             for (const hint of spec.help.misconfig ?? []) contains(tm(hint));
           });
         });
       }
     });
 
-    describe('provider 目录', () => {
-      it('目录里每一家的名字都在 README 里出现过', () => {
+    describe('provider catalog', () => {
+      it('every provider name from the catalog appears in the README', () => {
         for (const desc of PROVIDER_CATALOG) contains(t(desc.labelKey));
       });
 
-      it('四种冲突策略的文案都在（README 那张表）', () => {
+      it('the wording for all four conflict strategies is there (the README table)', () => {
         for (const key of Object.values(STRATEGY_LABEL_KEY)) contains(t(key));
       });
     });
 
-    describe('manifest 权限', () => {
+    describe('manifest permissions', () => {
       // Compare against the manifest's exact text one by one, rather than assembling our own
       // -- if we assembled our own, both being wrong would still pass.
-      it('host_permissions 里每一项都在 README 里列了出来', () => {
+      it('every host_permissions entry is listed in the README', () => {
         for (const pattern of manifest.host_permissions) contains(pattern);
       });
 
-      it('README 里没有 manifest 之外、也不属于任何 provider 的域', () => {
+      it('the README has no domain that is outside the manifest and owned by no provider', () => {
         // The other half. An extra domain doesn't break anything, so this kind of leftover
         // gives no signal -- only a test can catch it (same as the one in tests/manifest.test.ts).
         const foreign = allOrigins().filter((o) => !manifest.host_permissions.includes(o));
@@ -118,7 +118,7 @@ for (const readme of READMES) {
       });
     });
 
-    describe('不提已经删掉的同步方式', () => {
+    describe('does not mention removed sync methods', () => {
       /**
        * Sync methods that have been removed. After deleting a provider, this is the thing
        * most likely to stay behind in the README -- the user reads a detailed registration
@@ -138,7 +138,7 @@ for (const readme of READMES) {
         'Azure',
       ];
 
-      it.each(REMOVED)('README 里没有「%s」', (word) => {
+      it.each(REMOVED)('the README does not contain "%s"', (word) => {
         expect(readme.text.includes(word), `README 里提到了已经删掉的同步方式：${word}`).toBe(false);
       });
     });

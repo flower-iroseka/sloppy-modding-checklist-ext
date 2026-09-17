@@ -97,7 +97,7 @@ describe('runPush', () => {
     remote = fakeProvider(null);
   });
 
-  it('远端没有文件 → 新建一份，不需要备份', async () => {
+  it('no remote file -> create one, no backup needed', async () => {
     const { deps, state } = makeDeps(remote.provider, doc(100, 'a'));
     const out = await runPush(deps);
 
@@ -107,20 +107,20 @@ describe('runPush', () => {
     expect(JSON.parse(remote.state.writes[0]).cells['general-internal'][0].summary).toBe('a');
   });
 
-  it('覆盖更旧的远端 → 先备份远端', async () => {
+  it('overwriting an older remote -> back up the remote first', async () => {
     remote = fakeProvider(serializeDoc(doc(50, '旧远端', 'd-remote')));
     const { deps, state } = makeDeps(remote.provider, doc(100, '新本地'));
     const out = await runPush(deps);
 
     expect(out.action).toBe('push');
-    // `side` is a `BackupSide` (`'local'` / `'remote'`), not the Chinese "远端" -- see manager.ts.
+    // `side` is a `BackupSide` (`'local'` / `'remote'`), an enum value, not a display string -- see manager.ts.
     // It's only used to build a storage key prefix; translating it is the display side's job
     // (the line below is the actual copy).
     expect(state.backups.map((b) => b.side)).toEqual(['remote']);
     expect(renderMsg(out.message, 'zh')).toContain('备份');
   });
 
-  it('远端更新 + 默认策略 → 挂冲突，且一个字节都不写', async () => {
+  it('remote newer + default strategy -> raise a conflict and write not a single byte', async () => {
     const remoteJson = serializeDoc(doc(500, '远端新', 'd-remote'));
     remote = fakeProvider(remoteJson);
     const { deps, state } = makeDeps(remote.provider, doc(100, '本地旧'));
@@ -137,7 +137,7 @@ describe('runPush', () => {
     expect(state.backups).toEqual([]);
   });
 
-  it('同一个冲突上 force → 真的覆盖', async () => {
+  it('force on the same conflict -> actually overwrites', async () => {
     remote = fakeProvider(serializeDoc(doc(500, '远端新', 'd-remote')));
     const { deps } = makeDeps(remote.provider, doc(100, '本地旧'));
     const out = await runPush(deps, { force: true });
@@ -146,7 +146,7 @@ describe('runPush', () => {
     expect(JSON.parse(remote.state.json!).cells['general-internal'][0].summary).toBe('本地旧');
   });
 
-  it('策略为「本地优先」时远端更新也直接传，不问', async () => {
+  it('with the local-wins strategy a newer remote is pushed anyway, without asking', async () => {
     remote = fakeProvider(serializeDoc(doc(500, '远端新', 'd-remote')));
     const { deps } = makeDeps(remote.provider, doc(100, '本地旧'), 'local-wins');
     const out = await runPush(deps);
@@ -155,7 +155,7 @@ describe('runPush', () => {
     expect(out.conflict).toBeUndefined();
   });
 
-  it('内容一致 → none，不发写请求', async () => {
+  it('same content -> none, no write request', async () => {
     const local = doc(100, '一样');
     remote = fakeProvider(serializeDoc(local));
     const { deps } = makeDeps(remote.provider, local);
@@ -168,7 +168,7 @@ describe('runPush', () => {
   // The remote copy has the key order from the last upload, while the local one was just
   // computed by normalizeDoc. Comparing the strings directly would call them "different",
   // so every sync would re-upload for nothing.
-  it('键序不同但内容一致 → none', async () => {
+  it('different key order but same content -> none', async () => {
     const local = doc(100, '一样');
     const src = local as unknown as Record<string, unknown>;
     const reordered: Record<string, unknown> = {};
@@ -184,7 +184,7 @@ describe('runPush', () => {
     expect(remote.state.writes).toEqual([]);
   });
 
-  it('远端文件坏掉时照传不误（坏文件本来就该被覆盖）', async () => {
+  it('a corrupt remote file is still pushed over (a corrupt file deserves overwriting anyway)', async () => {
     remote = fakeProvider('{ 这不是 JSON');
     const { deps } = makeDeps(remote.provider, doc(100, '本地'));
     const out = await runPush(deps);
@@ -193,7 +193,7 @@ describe('runPush', () => {
     expect(remote.state.writes).toHaveLength(1);
   });
 
-  it('远端是合法 JSON 但不是 checklist 文档 → 同样当作可覆盖', async () => {
+  it('remote is valid JSON but not a checklist doc -> treated as overwritable too', async () => {
     remote = fakeProvider('{"hello":"world"}');
     const { deps } = makeDeps(remote.provider, doc(100, '本地'));
     expect((await runPush(deps)).action).toBe('push');
@@ -201,7 +201,7 @@ describe('runPush', () => {
 });
 
 describe('runPull', () => {
-  it('远端更新 → 覆盖本地，并备份本地', async () => {
+  it('remote newer -> overwrite local and back up local', async () => {
     const remote = fakeProvider(serializeDoc(doc(500, '远端新', 'd-remote')));
     const { deps, state } = makeDeps(remote.provider, doc(100, '本地旧'));
     const out = await runPull(deps);
@@ -212,7 +212,7 @@ describe('runPull', () => {
     expect(state.local.deviceId).toBe('d-remote');
   });
 
-  it('远端没有文件 → none，不写本地也不备份', async () => {
+  it('no remote file -> none, no local write and no backup', async () => {
     const remote = fakeProvider(null);
     const { deps, state } = makeDeps(remote.provider, doc(100, '本地'));
     const out = await runPull(deps);
@@ -222,7 +222,7 @@ describe('runPull', () => {
     expect(state.local.cells['general-internal'][0].summary).toBe('本地');
   });
 
-  it('本地更新 → none（拉取不会把本地往回退）', async () => {
+  it('local newer -> none (a pull never rolls local back)', async () => {
     const remote = fakeProvider(serializeDoc(doc(50, '远端旧', 'd-remote')));
     const { deps, state } = makeDeps(remote.provider, doc(100, '本地新'));
     const out = await runPull(deps);
@@ -233,7 +233,7 @@ describe('runPull', () => {
 
   // Once a remote file without updatedAt is taken as "now", it silently overwrites local.
   // remoteSide passes now=0, so it has to be judged "older".
-  it('远端文件缺 updatedAt → 不采纳（不会被当成「刚改的」）', async () => {
+  it('remote file missing updatedAt -> not taken (never treated as "just changed")', async () => {
     const bare = { schemaVersion: 1, deviceId: 'd-remote', cells: {} };
     const remote = fakeProvider(JSON.stringify(bare));
     const { deps, state } = makeDeps(remote.provider, doc(999_999, '本地'));
@@ -243,7 +243,7 @@ describe('runPull', () => {
     expect(state.local.cells['general-internal'][0].summary).toBe('本地');
   });
 
-  it('时间戳打平 + ask → 挂 pull 冲突，不动本地', async () => {
+  it('timestamp tie + ask -> raise a pull conflict, leave local alone', async () => {
     const remoteJson = serializeDoc(doc(100, '远端', 'd-remote'));
     const remote = fakeProvider(remoteJson);
     const { deps, state } = makeDeps(remote.provider, doc(100, '本地'), 'ask');
@@ -255,7 +255,7 @@ describe('runPull', () => {
     expect(state.local.cells['general-internal'][0].summary).toBe('本地');
   });
 
-  it('时间戳打平 + force → 采用远端', async () => {
+  it('timestamp tie + force -> take the remote', async () => {
     const remote = fakeProvider(serializeDoc(doc(100, '远端', 'd-remote')));
     const { deps, state } = makeDeps(remote.provider, doc(100, '本地'), 'ask');
     const out = await runPull(deps, { force: true });
@@ -264,7 +264,7 @@ describe('runPull', () => {
     expect(state.local.cells['general-internal'][0].summary).toBe('远端');
   });
 
-  it('remoteJsonOverride 直接用现场那份，不再打一次网络', async () => {
+  it('remoteJsonOverride uses the in-hand copy directly, no second network call', async () => {
     const override = serializeDoc(doc(500, '冲突现场', 'd-remote'));
     const remote = fakeProvider(null);
     const { deps, state } = makeDeps(remote.provider, doc(100, '本地'));
@@ -275,7 +275,7 @@ describe('runPull', () => {
     expect(state.local.cells['general-internal'][0].summary).toBe('冲突现场');
   });
 
-  it('远端 JSON 非法 → 抛错，而不是把本地清空', async () => {
+  it('remote JSON invalid -> throws, instead of wiping local', async () => {
     const remote = fakeProvider('不是 JSON');
     const { deps, state } = makeDeps(remote.provider, doc(100, '本地'));
     await expect(runPull(deps)).rejects.toThrow(/远端文件不是合法的 checklist JSON/);
@@ -284,19 +284,19 @@ describe('runPull', () => {
 });
 
 describe('adopt', () => {
-  it('远端更新时不改时间戳', () => {
+  it('a newer remote keeps its timestamp', () => {
     expect(adopt(doc(500, 'r'), 100).updatedAt).toBe(500);
   });
 
   // Without bumping the timestamp, an open extension page would ignore this adoption and
   // then write the old content back to storage -- making the whole pull pointless.
-  it('远端不比本地新时把时间戳抬到本地之上', () => {
+  it('when the remote is not newer, raise the timestamp above local', () => {
     const adopted = adopt(doc(100, 'r'), 100);
     expect(adopted.updatedAt).toBe(101);
     expect(adopted.updatedAt).toBeGreaterThan(100);
   });
 
-  it('抬高时间戳不会动内容', () => {
+  it('raising the timestamp does not touch the content', () => {
     const adopted = adopt(doc(100, 'r'), 500);
     expect(adopted.cells).toEqual(doc(100, 'r').cells);
     expect(adopted.deviceId).toBe('d-local');

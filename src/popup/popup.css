@@ -33,7 +33,7 @@
   letter-spacing: 0.2px;
 }
 
-/* "共 N 条", aligned right */
+/* "{count} in total", aligned right */
 .pu__subtitle {
   margin-left: auto;
   font-size: 13px;

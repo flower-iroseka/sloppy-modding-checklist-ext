@@ -33,7 +33,10 @@ export function getCurrentUserId(): Promise<number | undefined> {
         resolve(id);
       });
     } catch (e) {
-      console.warn('[sloppy-mod-checklist] 读取当前用户失败，来源推荐退回归 external', e);
+      console.warn(
+        '[sloppy-mod-checklist] could not read the current user, the source suggestion falls back to external',
+        e,
+      );
       resolve(undefined);
     }
   }).finally(() => {

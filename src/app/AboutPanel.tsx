@@ -7,6 +7,14 @@ const AUTHOR = 'flower-iroseka';
 const REPO_URL = 'https://github.com/flower-iroseka/sloppy-modding-checklist-ext';
 
 /**
+ * The version shown here, read back from the manifest the browser actually loaded.
+ *
+ * Not a constant: a second copy would be one more place to forget on a release, and a
+ * "Version 0.1.0" that disagrees with chrome://extensions is worse than showing nothing.
+ */
+const VERSION = chrome.runtime.getManifest().version;
+
+/**
  * Electoz's osu! user page. The numeric id is the canonical URL; `/users/Electoz` redirects
  * to the same page.
  */
@@ -32,6 +40,8 @@ export function AboutPanel() {
         {t('about.author', { author: AUTHOR })}
         {' · '}
         {t('about.license')}
+        {' · '}
+        {t('about.version', { version: VERSION })}
       </p>
       <p className="panel__body">{t('about.aiNote')}</p>
 

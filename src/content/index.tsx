@@ -15,7 +15,7 @@ import { readPostTarget, type PostTarget } from './osuUser';
 
 /**
  * Content script (CODING_PLAN §8): on the osu! beatmap discussion page, inject a
- * "＋ 添加到 Checklist" button into every post, plus a floating button that opens the full-page app.
+ * "+ Add to Checklist" button into every post, plus a floating button that opens the full-page app.
  *
  * Two layers: the page DOM part uses plain DOM (lightweight, doesn't mind osu re-rendering), and
  * the overlay is a small React root mounted in a shadow DOM (fully isolated from the site's styles).
@@ -96,6 +96,7 @@ function ContentApp() {
         }
         recommendedSource={target?.recommendedSource}
         recommendedScope={target?.recommendedScope}
+        detectedDifficulty={target?.difficulty}
         onSubmit={(input) => {
           checklistStore.getState().addEntry(input);
           setPending(null);
@@ -163,7 +164,7 @@ function mountOverlay(): void {
   const bg = getComputedStyle(host).getPropertyValue('--bg-surface').trim();
   if (!bg) {
     console.warn(
-      '[sloppy-mod-checklist] 主题变量未注入 shadow root（theme.css 的选择器改写可能失效），弹层配色会回退到兜底值',
+      '[sloppy-mod-checklist] the theme variables were not injected into the shadow root (the theme.css selector rewrite may have failed), the overlay colours will fall back to the defaults',
     );
   }
 }
@@ -193,7 +194,7 @@ async function onAddClicked(
     setPending(target);
   } catch (e) {
     // Site-redesign protection: don't throw beyond the page console, just show a toast
-    console.warn('[sloppy-mod-checklist] 读取 post 失败，站点结构可能已变化', e);
+    console.warn('[sloppy-mod-checklist] could not read the post, the site layout may have changed', e);
     showToast(t('content.siteChanged'), 'error');
     button.removeAttribute('data-mc-ready');
   }
@@ -287,7 +288,7 @@ function ensureFab(): void {
         showToast(t('content.openFailed'), 'error');
       });
     } catch (e) {
-      console.warn('[sloppy-mod-checklist] sendMessage 失败', e);
+      console.warn('[sloppy-mod-checklist] sendMessage failed', e);
     }
   });
 
@@ -334,7 +335,7 @@ function scheduleSweep(delay = 250): void {
     try {
       injectPostButtons();
     } catch (e) {
-      console.warn('[sloppy-mod-checklist] sweep 失败', e);
+      console.warn('[sloppy-mod-checklist] sweep failed', e);
     }
   }, delay);
 }
@@ -370,9 +371,9 @@ function main(): void {
 
   const count = safeQueryAll(document, SELECTORS.discussion).length;
   console.info(
-    `[sloppy-mod-checklist] content script ready（识别到 ${count} 条 discussion` +
-      (count === 0 ? '；若站点已改版请更新 locators.ts' : '') +
-      '）',
+    `[sloppy-mod-checklist] content script ready (found ${count} discussions` +
+      (count === 0 ? '; if the site has been redesigned, please update locators.ts' : '') +
+      ')',
   );
 }
 

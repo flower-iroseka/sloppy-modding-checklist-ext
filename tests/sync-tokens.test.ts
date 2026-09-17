@@ -14,11 +14,11 @@ import { normalizeTokens } from '../src/core/sync/tokens';
 const ok = { accessToken: 'at', expiresAt: 123, refreshToken: 'rt', scope: 's' };
 
 describe('normalizeTokens', () => {
-  it('正常的记录原样读回来', () => {
+  it('a normal record reads back unchanged', () => {
     expect(normalizeTokens({ dropbox: ok })).toEqual({ dropbox: ok });
   });
 
-  it('可选字段缺了就不出现（不是留个 undefined 的洞）', () => {
+  it('a missing optional field just does not appear (no undefined hole left behind)', () => {
     expect(normalizeTokens({ dropbox: { accessToken: 'at', expiresAt: 1 } })).toEqual({
       dropbox: { accessToken: 'at', expiresAt: 1 },
     });
@@ -27,7 +27,7 @@ describe('normalizeTokens', () => {
   // This is why this block exists: Google Drive is no longer in PROVIDER_IDS, but the
   // refresh_token in old profiles is still there. No code reads it, so unless this drops
   // it, it stays forever -- a credential nobody uses and nobody would remember to delete.
-  it('目录里已经没有的 provider → 丢掉（比如被砍掉的 googleDrive）', () => {
+  it('a provider no longer in the catalog -> dropped (e.g. the retired googleDrive)', () => {
     expect(normalizeTokens({ dropbox: ok, googleDrive: { accessToken: 'old', expiresAt: 1 } })).toEqual({
       dropbox: ok,
     });
@@ -35,17 +35,17 @@ describe('normalizeTokens', () => {
 
   // The other half of the same thing: if that provider is ever added back, the old record
   // must not be taken as "already connected".
-  it('只剩废弃 id 时 → 空对象，而不是「还留着一条」', () => {
+  it('only a retired id left -> empty object, not "one record still there"', () => {
     expect(normalizeTokens({ googleDrive: { accessToken: 'old', expiresAt: 1 } })).toEqual({});
   });
 
-  it('缺 accessToken 或 expiresAt 不是数字 → 丢掉', () => {
+  it('missing accessToken, or expiresAt not a number -> dropped', () => {
     expect(normalizeTokens({ dropbox: { accessToken: 'at' } })).toEqual({});
     expect(normalizeTokens({ dropbox: { accessToken: 'at', expiresAt: '123' } })).toEqual({});
     expect(normalizeTokens({ dropbox: { expiresAt: 1 } })).toEqual({});
   });
 
-  it('垃圾输入 → 空对象（不是抛错）', () => {
+  it('garbage input -> empty object (not a throw)', () => {
     for (const raw of [null, undefined, 0, 'x', [], { dropbox: null }]) {
       expect(normalizeTokens(raw)).toEqual({});
     }

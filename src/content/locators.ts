@@ -22,6 +22,8 @@ export const SELECTORS = {
   activeGameMode: '.game-mode-link--active[data-mode]',
   /** The current page category (generalAll / general / timeline / reviews …). */
   activePageMode: '.page-mode-link--is-active[data-mode]',
+  /** The embedded beatmapset data: every difficulty's name, star rating and mode. */
+  beatmapsetJson: 'script#json-beatmapset',
   /** Marker attribute for the elements we inject ourselves; the sweep currently keys off `.mc-add-btn` instead. */
   injectedAttr: 'data-mc-injected',
 } as const;

@@ -97,7 +97,7 @@ async function rectOf(selector) {
     const b = el.getBoundingClientRect();
     return { x: b.x + b.width / 2, y: b.y + b.height / 2, left: b.x, top: b.y, w: b.width, h: b.height };
   })()`);
-  if (!r) throw new Error(`找不到元素：${selector}`);
+  if (!r) throw new Error(`element not found: ${selector}`);
   return r;
 }
 
@@ -118,7 +118,7 @@ async function dragTo(fromSelector, toSelector) {
   // A drag can't fall back to programmatic events (dnd-kit needs the real mouseMoved
   // movement), so we report an environment error when the tab isn't visible rather than
   // letting it turn into a fake assertion failure.
-  await requireInteractive(evaluate, `${fromSelector} → ${toSelector} 的拖拽`);
+  await requireInteractive(evaluate, `drag from ${fromSelector} → ${toSelector}`);
 
   const from = await rectOf(fromSelector);
   const to = await rectOf(toSelector);
@@ -147,7 +147,7 @@ async function click(selector) {
   const how = await clickSelector(send, evaluate, `document.querySelector(${JSON.stringify(selector)})`, {
     sleep,
   });
-  if (how === 'missing') throw new Error(`找不到元素：${selector}`);
+  if (how === 'missing') throw new Error(`element not found: ${selector}`);
 }
 
 /**
@@ -225,9 +225,9 @@ async function openAndWaitReady() {
   return false;
 }
 
-console.log('== M2: 卡片 / 弹窗 / 拖拽 ==');
+console.log('== M2: cards / modal / drag ==');
 
-check('页面就绪（4 个格子已渲染）', await openAndWaitReady());
+check('page ready (4 zones rendered)', await openAndWaitReady());
 
 // 1) Seed three entries, all in general-internal
 const seeded = await evaluate(`(async () => {
@@ -243,11 +243,11 @@ const seeded = await evaluate(`(async () => {
 await sleep(250);
 
 let order = await evaluate(DOM.orderIn('general-internal'));
-check('三条卡片按插入顺序渲染', JSON.stringify(order) === JSON.stringify([seeded.a, seeded.b, seeded.c]), JSON.stringify(order));
+check('three cards render in insertion order', JSON.stringify(order) === JSON.stringify([seeded.a, seeded.b, seeded.c]), JSON.stringify(order));
 
-check('序号显示为 #1 #2 #3', (await evaluate(`[...document.querySelectorAll('.zone[data-cell="general-internal"] .card__index')].map(e => e.textContent).join('')`)) === '#1#2#3');
-check('每张卡都有拖拽 handle', (await evaluate(`document.querySelectorAll('.zone[data-cell="general-internal"] .card__handle').length`)) === 3);
-check('计数徽章 = 3', (await evaluate(DOM.countBadge('general-internal'))) === '3');
+check('index shows as #1 #2 #3', (await evaluate(`[...document.querySelectorAll('.zone[data-cell="general-internal"] .card__index')].map(e => e.textContent).join('')`)) === '#1#2#3');
+check('every card has a drag handle', (await evaluate(`document.querySelectorAll('.zone[data-cell="general-internal"] .card__handle').length`)) === 3);
+check('count badge = 3', (await evaluate(DOM.countBadge('general-internal'))) === '3');
 
 // 2) Real pointer drag: drag Alpha onto Charlie (move down within the same cell)
 await dragTo(
@@ -256,7 +256,7 @@ await dragTo(
 );
 order = await evaluate(DOM.orderIn('general-internal'));
 check(
-  '同格拖拽：Alpha 落到 Charlie 之后',
+  'same-cell drag: Alpha lands after Charlie',
   JSON.stringify(order) === JSON.stringify([seeded.b, seeded.c, seeded.a]),
   JSON.stringify(order.map((id) => ({ [seeded.a]: 'A', [seeded.b]: 'B', [seeded.c]: 'C' }[id]))),
 );
@@ -264,7 +264,7 @@ check(
 await flush();
 let stored = await storedCells();
 check(
-  '同格拖拽已落库',
+  'same-cell drag written to storage',
   JSON.stringify(stored['general-internal']) === JSON.stringify([seeded.b, seeded.c, seeded.a]),
   JSON.stringify(stored['general-internal']),
 );
@@ -276,33 +276,33 @@ await dragTo(
 );
 order = await evaluate(DOM.orderIn('general-internal'));
 const orderExt = await evaluate(DOM.orderIn('general-external'));
-check('跨格拖拽：源格只剩 B/C', JSON.stringify(order) === JSON.stringify([seeded.b, seeded.c]), JSON.stringify(order));
-check('跨格拖拽：目标格出现 Alpha', JSON.stringify(orderExt) === JSON.stringify([seeded.a]), JSON.stringify(orderExt));
+check('cross-cell drag: only B/C left in the source zone', JSON.stringify(order) === JSON.stringify([seeded.b, seeded.c]), JSON.stringify(order));
+check('cross-cell drag: Alpha shows up in the target zone', JSON.stringify(orderExt) === JSON.stringify([seeded.a]), JSON.stringify(orderExt));
 
 const moved = await evaluate(`(() => {
   const cells = window.__mc.doc().cells;
   const e = cells['general-external'].find(x => x.id === ${JSON.stringify(seeded.a)});
   return e ? { scope: e.scope, source: e.source } : null;
 })()`);
-check('跨格拖拽同步改写 scope/source', moved?.scope === 'general' && moved?.source === 'external', JSON.stringify(moved));
+check('cross-cell drag rewrites scope/source too', moved?.scope === 'general' && moved?.source === 'external', JSON.stringify(moved));
 
 stored = await storedCells();
-check('跨格拖拽已落库', JSON.stringify(stored['general-external']) === JSON.stringify([seeded.a]));
+check('cross-cell drag written to storage', JSON.stringify(stored['general-external']) === JSON.stringify([seeded.a]));
 
 // 4) The "+" button opens the modal to add an entry
 await click('.zone[data-cell="individual-external"] .zone__add');
 await sleep(250);
-check('弹窗打开', (await evaluate(`!!document.querySelector('.mc-modal')`)) === true);
-check('弹窗默认选中所在格（Individual × External）', (await evaluate(`document.querySelectorAll('.mc-seg__opt--on')[1].textContent`)) === 'External');
+check('modal opens', (await evaluate(`!!document.querySelector('.mc-modal')`)) === true);
+check('modal preselects the zone it was opened from (Individual × External)', (await evaluate(`document.querySelectorAll('.mc-seg__opt--on')[1].textContent`)) === 'External');
 
 await typeText('.mc-modal textarea', '新增的第四条');
 await click('.mc-modal__foot .btn--accent');
 await sleep(300);
 
 const afterAdd = await evaluate(DOM.orderIn('individual-external'));
-check('新增成功并进入对应格子', afterAdd.length === 1, JSON.stringify(afterAdd));
-check('新增后弹窗关闭', (await evaluate(`!!document.querySelector('.mc-modal')`)) === false);
-check('计数徽章更新为 1', (await evaluate(DOM.countBadge('individual-external'))) === '1');
+check('added successfully and filed into the right zone', afterAdd.length === 1, JSON.stringify(afterAdd));
+check('modal closes after adding', (await evaluate(`!!document.querySelector('.mc-modal')`)) === false);
+check('count badge updates to 1', (await evaluate(DOM.countBadge('individual-external'))) === '1');
 
 // 5) Note: open the inline editor and save
 await click('.zone[data-cell="individual-external"] .card__notebtn');
@@ -321,21 +321,21 @@ const note = await evaluate(`(() => {
   const cells = window.__mc.doc().cells['individual-external'];
   return cells[0]?.note ?? null;
 })()`);
-check('备注保存进 store', note === '这是一条备注', String(note));
-check('卡片显示备注预览', (await evaluate(`document.querySelector('.card__notepreview')?.textContent ?? ''`)) === '这是一条备注');
+check('note saved into the store', note === '这是一条备注', String(note));
+check('card shows the note preview', (await evaluate(`document.querySelector('.card__notepreview')?.textContent ?? ''`)) === '这是一条备注');
 
 // 6) Delete: two-step confirmation
 // The delete button is plain by default; only after the first click does it turn --danger
 // and show "确认" (two steps so you don't delete by accident)
 await click('.zone[data-cell="individual-external"] .card__iconbtn[aria-label="删除条目"]');
 await sleep(150);
-check('第一次点击进入确认态', (await evaluate(`!!document.querySelector('.card__confirm')`)) === true);
+check('first click enters the confirm state', (await evaluate(`!!document.querySelector('.card__confirm')`)) === true);
 await click('.zone[data-cell="individual-external"] .card__iconbtn[aria-label="确认删除"]');
 await sleep(300);
-check('第二次点击真的删除', (await evaluate(DOM.countIn('individual-external'))) === 0);
+check('second click actually deletes', (await evaluate(DOM.countIn('individual-external'))) === 0);
 
 stored = await storedCells();
-check('删除已落库', (stored['individual-external'] ?? []).length === 0, JSON.stringify(stored['individual-external']));
+check('delete written to storage', (stored['individual-external'] ?? []).length === 0, JSON.stringify(stored['individual-external']));
 
 // 7) After a reload the drag results are still there (the order is persisted data)
 await openAndWaitReady();
@@ -344,11 +344,54 @@ const afterReload = {
   ge: await evaluate(DOM.orderIn('general-external')),
 };
 check(
-  '刷新后顺序与跨格归类都还在',
+  'order and cross-cell grouping survive a reload',
   JSON.stringify(afterReload.gi) === JSON.stringify([seeded.b, seeded.c]) &&
     JSON.stringify(afterReload.ge) === JSON.stringify([seeded.a]),
   JSON.stringify(afterReload),
 );
+
+// 8) The difficulty marker. Only Individual entries get one, and its colour rides on a theme
+//    variable that fails silently -- a chip with an unresolvable `--diff` still renders, just
+//    in the plain text colour -- so the colour is asserted, not only the presence.
+await evaluate(`(async () => {
+  const mc = window.__mc;
+  mc.clearAll();
+  await mc.flush();
+  mc.addEntry({ scope: 'individual', source: 'external', summary: 'Tiered', difficulty: 'hard' });
+  mc.addEntry({ scope: 'individual', source: 'external', summary: 'Plain' });
+  mc.addEntry({ scope: 'general', source: 'internal', summary: 'General but tiered', difficulty: 'insane' });
+  await mc.flush();
+})()`);
+await sleep(250);
+
+check('a tiered card shows its difficulty', (await evaluate(`document.querySelector('.zone[data-cell="individual-external"] .card__diff')?.textContent.trim() ?? ''`)) === 'Hard');
+check('a card without a tier shows no marker', (await evaluate(`document.querySelectorAll('.zone[data-cell="individual-external"] .card__diff').length`)) === 1);
+check('a General card hides the tier it still carries', (await evaluate(`document.querySelectorAll('.zone[data-cell="general-internal"] .card__diff').length`)) === 0);
+check(
+  'the marker bar is painted with the tier colour',
+  (await evaluate(`getComputedStyle(document.querySelector('.zone[data-cell="individual-external"] .card__diff-bar')).backgroundColor`)) === 'rgb(247, 232, 93)',
+);
+
+// 9) The picker fills the selected tier with that tier's own colour rather than the generic
+//    accent. Same silent-failure shape as the marker: an unresolvable `--diff` leaves the
+//    option filled with the accent instead, which still looks entirely deliberate.
+await click('.zone[data-cell="individual-external"] li.card .card__iconbtn');
+await sleep(350);
+check(
+  'the edit dialog opens with the stored tier selected',
+  (await evaluate(`document.querySelector('.mc-seg__opt--diff[data-difficulty="hard"]')?.classList.contains('mc-seg__opt--on')`)) === true,
+);
+const fills = await evaluate(`(() => {
+  const bg = (s) => { const el = document.querySelector(s); return el ? getComputedStyle(el).backgroundColor : null; };
+  const tier = '.mc-seg__opt--diff[data-difficulty="hard"]';
+  return { tier: bg(tier), accent: bg('.mc-seg__opt--on:not(.mc-seg__opt--diff)'), ink: bg(tier) && getComputedStyle(document.querySelector(tier)).color };
+})()`);
+check(
+  'the selected tier is filled with its own colour, not the accent',
+  fills.tier !== null && fills.tier !== 'rgba(0, 0, 0, 0)' && fills.tier !== fills.accent,
+  JSON.stringify(fills),
+);
+check('the selected tier name is written in the dark ink', fills.ink === 'rgb(16, 21, 12)', String(fills.ink));
 
 // Wrap up
 await evaluate(`(async () => { window.__mc.clearAll(); await window.__mc.flush(); })()`);

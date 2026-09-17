@@ -45,18 +45,18 @@ function remoteDoc(offsetMs: number, summary = '远端条目'): ChecklistDoc {
   return doc;
 }
 
-describe('多上下文实时同步（chrome.storage.onChanged）', () => {
+describe('live sync across contexts (chrome.storage.onChanged)', () => {
   beforeEach(() => {
     resetStore();
     markPersisted(s().doc);
   });
 
-  it('未水合时不采纳外部文档', () => {
+  it('does not take an external doc before hydrate', () => {
     expect(s().hydrated).toBe(false);
     expect(applyExternalDoc(remoteDoc(5_000))).toBe('ignored');
   });
 
-  it('水合后采纳更新的远端文档', async () => {
+  it('takes a newer remote doc after hydrate', async () => {
     await s().hydrate();
     markPersisted(s().doc);
 
@@ -65,7 +65,7 @@ describe('多上下文实时同步（chrome.storage.onChanged）', () => {
     expect(s().doc.deviceId).toBe('d-remote');
   });
 
-  it('远端不比本地新 → 不采纳（同时天然忽略自己写盘产生的回声）', async () => {
+  it('remote not newer than local -> not taken (which also ignores the echo of our own write)', async () => {
     await s().hydrate();
     markPersisted(s().doc);
     const current = s().doc;
@@ -75,7 +75,7 @@ describe('多上下文实时同步（chrome.storage.onChanged）', () => {
     expect(s().doc).toBe(current);
   });
 
-  it('本地有未落盘的改动时，外部改动被拒绝（避免丢数据）', async () => {
+  it('an external change is rejected while local changes are not yet persisted (no data loss)', async () => {
     await s().hydrate();
     markPersisted(s().doc);
 
@@ -92,7 +92,7 @@ describe('多上下文实时同步（chrome.storage.onChanged）', () => {
     expect(s().doc.cells['general-internal'].map((e) => e.summary)).toEqual(['后来的远端']);
   });
 
-  it('非法/损坏的远端值被忽略而不是抛错', async () => {
+  it('an invalid/corrupt remote value is ignored rather than throwing', async () => {
     await s().hydrate();
     markPersisted(s().doc);
 
@@ -101,7 +101,7 @@ describe('多上下文实时同步（chrome.storage.onChanged）', () => {
     expect(applyExternalDoc({ schemaVersion: 99, cells: {} })).toBe('ignored');
   });
 
-  it('采纳后本地不再处于 dirty 状态（不会把刚收到的远端内容又写回去）', async () => {
+  it('after taking it, local is no longer dirty (the just-received remote content is not written back)', async () => {
     await s().hydrate();
     markPersisted(s().doc);
 

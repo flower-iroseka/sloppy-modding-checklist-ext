@@ -29,7 +29,7 @@ const entry = (id: string, links: string[]): ChecklistEntry => ({
 });
 
 describe('normalizeUrl', () => {
-  it('去掉首尾空白、末尾斜杠与 hash', () => {
+  it('strips leading/trailing whitespace, trailing slash and hash', () => {
     expect(normalizeUrl('  https://osu.ppy.sh/beatmapsets/1/discussion/2#513  ')).toBe(
       'https://osu.ppy.sh/beatmapsets/1/discussion/2',
     );
@@ -37,25 +37,25 @@ describe('normalizeUrl', () => {
   });
 });
 
-describe('去重查找', () => {
+describe('dedupe lookup', () => {
   // Fill only two of the four cells and leave the other two empty: that also catches a
   // lookup which skips a cell or runs off the end
   const cells = emptyCells();
   cells['general-internal'] = [entry('e1', ['https://osu.ppy.sh/beatmapsets/1/discussion/2'])];
   cells['individual-external'] = [entry('e2', ['https://example.com/pattern'])];
 
-  it('findByLink 跨四格命中并忽略末尾斜杠/hash 差异', () => {
+  it('findByLink matches across all four cells and ignores trailing slash/hash differences', () => {
     expect(findByLink(cells, 'https://osu.ppy.sh/beatmapsets/1/discussion/2/#513')?.id).toBe('e1');
     expect(findByLink(cells, 'https://example.com/pattern/')?.id).toBe('e2');
     expect(findByLink(cells, 'https://nope.example/x')).toBeNull();
   });
 
-  it('findDuplicate 命中任意一条链接', () => {
+  it('findDuplicate matches any one of the links', () => {
     expect(findDuplicate(cells, ['https://nope.example/x', 'https://example.com/pattern'])?.id).toBe('e2');
     expect(findDuplicate(cells, ['https://nope.example/x'])).toBeNull();
   });
 
-  it('linksOverlap 空数组不视为重复', () => {
+  it('linksOverlap treats an empty array as not a duplicate', () => {
     expect(linksOverlap([], ['a'])).toBe(false);
     expect(linksOverlap(['a'], [])).toBe(false);
     expect(linksOverlap(['https://a/'], ['https://a'])).toBe(true);

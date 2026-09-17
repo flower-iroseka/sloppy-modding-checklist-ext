@@ -6,8 +6,8 @@ import type { PendingConflict, ProviderId } from '../core/sync/types';
 
 /**
  * Prefix for all message types. The SW uses it to tell "messages from this extension" apart from
- * "messages someone else sent" -- the former get a "扩展可能没重新加载" reply when unrecognized,
- * the latter are simply ignored.
+ * "messages someone else sent" -- the former get a "the extension may not have been reloaded"
+ * reply when unrecognized, the latter are simply ignored.
  */
 export const MESSAGE_PREFIX = 'mc:';
 
@@ -45,14 +45,14 @@ export interface SyncTestMessage {
 /** Push this local copy. */
 export interface SyncPushMessage {
   type: typeof MSG_SYNC_PUSH;
-  /** Pass true when the user has confirmed "远端更新，仍要覆盖". */
+  /** Pass true when the user has confirmed "overwrite the remote even though it is newer". */
   force?: boolean;
 }
 
 /** Overwrite local with the remote. */
 export interface SyncPullMessage {
   type: typeof MSG_SYNC_PULL;
-  /** Pass true when the user has confirmed "本地更新，仍要覆盖". */
+  /** Pass true when the user has confirmed "overwrite the local copy even though it is newer". */
   force?: boolean;
   /** "Use the remote" -- sends back the copy captured during the conflict as-is, to avoid fetching it again. */
   remoteJsonOverride?: string;

@@ -46,48 +46,48 @@ function target(list: readonly HTMLElement[], active: Element | null, shift: boo
 }
 
 describe('trapTarget', () => {
-  it('面板里一个可聚焦元素都没有时不拦', () => {
+  it('lets the event through when the panel has no focusable element', () => {
     expect(target([], A, false)).toBeUndefined();
     expect(target([], A, true)).toBeUndefined();
   });
 
   // Middle positions must pass through: the browser's own Tab order still knows about
   // focus outside the panel, and only the two ends are ours to handle.
-  it('焦点在中间：两个方向都放行', () => {
+  it('focus in the middle: both directions pass through', () => {
     expect(target(THREE, B, false)).toBeUndefined();
     expect(target(THREE, B, true)).toBeUndefined();
   });
 
-  it('焦点在最后一个再按 Tab → 回到第一个', () => {
+  it('focus on the last element, Tab -> back to the first', () => {
     expect(target(THREE, C, false)).toBe('A');
   });
 
-  it('焦点在第一个再按 Shift+Tab → 跳到最后一个', () => {
+  it('focus on the first element, Shift+Tab -> jump to the last', () => {
     expect(target(THREE, A, true)).toBe('C');
   });
 
   // The other side of the same thing: these two must not be taken over. If the previous
   // test had been written as "always wrap to the first", these two would fail.
-  it('焦点在第一个按 Tab、在最后一个按 Shift+Tab 都不接管', () => {
+  it('Tab on the first and Shift+Tab on the last are both left alone', () => {
     expect(target(THREE, A, false)).toBeUndefined();
     expect(target(THREE, C, true)).toBeUndefined();
   });
 
-  it('只有一个可聚焦元素时，两个方向都回绕到它自己', () => {
+  it('with a single focusable element, both directions wrap back to it', () => {
     expect(target([A], A, false)).toBe('A');
     expect(target([A], A, true)).toBe('A');
   });
 
   // "Focus escaping the overlay" is the whole reason this thing exists, so it's the
   // one case this file should nail down hardest.
-  it('焦点已经不在面板里（或还没进来）→ 按方向拉回两端', () => {
+  it('focus already outside the panel (or not in yet) -> pulled back to the ends by direction', () => {
     expect(target(THREE, OUTSIDE, false)).toBe('A');
     expect(target(THREE, OUTSIDE, true)).toBe('C');
     expect(target(THREE, null, false)).toBe('A');
     expect(target(THREE, null, true)).toBe('C');
   });
 
-  it('单个元素 + 焦点在外面 → 拉回到它', () => {
+  it('single element + focus outside -> pulled back to it', () => {
     expect(target([A], null, false)).toBe('A');
     expect(target([A], null, true)).toBe('A');
   });

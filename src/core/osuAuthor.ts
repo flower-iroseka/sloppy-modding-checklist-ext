@@ -8,6 +8,7 @@
  * fetch resolves `postId → user_id → username`, and needs no OAuth.
  */
 
+import { asArray, asId, asRecord, extractJsonScript } from './osuJson';
 import type { SourceAuthor } from './types';
 
 const OSU_HOSTNAMES = new Set(['osu.ppy.sh', 'www.osu.ppy.sh']);
@@ -85,52 +86,6 @@ export interface BeatmapsetPayload {
 }
 
 /**
- * Grab the JSON out of `<script id="json-beatmapset">`.
- *
- * @param html the page's raw HTML
- * @returns the parsed JSON; undefined when the script tag is missing or holds invalid JSON
- */
-function extractBeatmapsetJson(html: string): unknown {
-  const m = /<script[^>]*\bid="json-beatmapset"[^>]*>([\s\S]*?)<\/script>/.exec(html);
-  if (!m) return undefined;
-  try {
-    return JSON.parse(m[1]!);
-  } catch {
-    return undefined;
-  }
-}
-
-/**
- * Anything that isn't an object counts as absent, so callers don't have to type-check.
- *
- * @param value a value parsed out of JSON
- * @returns the value as a record; undefined when it isn't an object
- */
-function asRecord(value: unknown): Record<string, unknown> | undefined {
-  return value && typeof value === 'object' ? (value as Record<string, unknown>) : undefined;
-}
-
-/**
- * Only finite numbers count; strings, NaN and Infinity all mean "no such field".
- *
- * @param value a value parsed out of JSON
- * @returns the number; undefined when it isn't a finite number
- */
-function asId(value: unknown): number | undefined {
-  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
-}
-
-/**
- * Anything that isn't an array counts as an empty one, so callers don't need a fallback.
- *
- * @param value a value parsed out of JSON
- * @returns the array; an empty one when it isn't an array
- */
-function asArray(value: unknown): unknown[] {
-  return Array.isArray(value) ? value : [];
-}
-
-/**
  * Pull the "post ↔ author" maps out of a discussion page's HTML.
  *
  * @param html the raw HTML of the discussion page
@@ -139,7 +94,7 @@ function asArray(value: unknown): unknown[] {
  *          quietly instead of throwing
  */
 export function parseBeatmapsetPayload(html: string): BeatmapsetPayload | undefined {
-  const root = asRecord(extractBeatmapsetJson(html));
+  const root = asRecord(extractJsonScript(html, 'json-beatmapset'));
   if (!root) return undefined;
 
   const usernames = new Map<number, string>();
@@ -435,7 +390,7 @@ export async function resolveLinkAuthor(
   // Only cache the successful run.
   //
   // If failures were cached too, one momentary hiccup (a dropped connection, a timeout)
-  // would make this link show "未识别作者" for the whole browser session:
+  // would make this link show "Author not recognised" for the whole browser session:
   // blurring again wouldn't retry, and the user would have to reload the page.
   // And a failure is exactly the one outcome worth retrying -- once a post's author
   // resolves, it never changes.

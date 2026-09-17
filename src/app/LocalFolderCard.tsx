@@ -17,15 +17,15 @@ export interface LocalFolderCardProps {
   permission: FolderPermission | null;
   /** Whether this browser has File System Access (Chrome / Edge 86+ only). */
   supported: boolean;
-  /** The directory picker is open, so the main button shows "选择中…". */
+  /** The directory picker is open, so the main button shows "Working…". */
   busy: boolean;
   /** An operation is running or the current config has an error, so all buttons are dead. */
   disabled: boolean;
   /** Click the main button: pick a directory, or switch to a different one. */
   onPick(): void;
-  /** Click "重新授权": ask the browser once more after the permission was revoked. */
+  /** Click "Re-authorize": ask the browser once more after the permission was revoked. */
   onReauthorize(): void;
-  /** Click "忘记": clear the remembered folder. */
+  /** Click "Disconnect": clear the remembered folder. */
   onForget(): void;
 }
 

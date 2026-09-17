@@ -38,9 +38,9 @@ interface Props {
   disabled: boolean;
   /** An input changed, merge the change into draft. */
   onChange(patch: Partial<OAuthDraft>): void;
-  /** Click "连接": start the OAuth authorization. */
+  /** Click "Save and connect": start the OAuth authorization. */
   onConnect(): void;
-  /** Click "断开": clear this provider's credentials. */
+  /** Click "Disconnect": clear this provider's credentials. */
   onDisconnect(): void;
 }
 
@@ -77,8 +77,9 @@ export function OAuthCard({
           // makes React remount the whole list (cheap here anyway).
           const text = tmMarkup(step);
           // Go through RichText instead of putting text straight into the <li>: these guide
-          // steps contain things like `**必须点 Submit**` that have to be bold, so the markers
-          // need to become real <strong> here (see RichText.tsx).
+          // steps contain things like `**You must then click Submit at the bottom of the
+          // page**` that have to be bold, so the markers need to become real <strong> here
+          // (see RichText.tsx).
           return (
             <li key={text}>
               <RichText text={text} />
@@ -88,9 +89,9 @@ export function OAuthCard({
       </ol>
       <p className="panel__body muted">
         {t('oauth.registerUrl')}
-        {/* There has to be a space between the label and the link: the Chinese sentence ends
-            with a full-width colon ("注册地址："), which gives visual separation on its own,
-            while the English `Register at:` puts the link right up against it
+        {/* There has to be a space between the label and the link: the Chinese label ends
+            with a full-width colon, which gives visual separation on its own, while the
+            English `Register at:` puts the link right up against it
             ("Register at:Dropbox App Console"). The space lives here rather than in the
             catalog, because trailing whitespace in a value is too easily stripped by an
             editor or some translation pass. */}

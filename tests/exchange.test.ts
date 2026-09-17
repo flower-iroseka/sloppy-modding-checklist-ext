@@ -36,8 +36,8 @@ function docWith(entries: Array<{ cell: 'general-internal' | 'general-external' 
   return doc;
 }
 
-describe('导出 / 导入', () => {
-  it('serialize → parse 往返一致', () => {
+describe('export / import', () => {
+  it('serialize -> parse round-trips', () => {
     const doc = docWith([
       {
         cell: 'general-internal',
@@ -63,13 +63,13 @@ describe('导出 / 导入', () => {
     expect(parsed).toEqual(doc);
   });
 
-  it('非法 JSON / 版本过高 / 缺 cells 均抛 DocValidationError', () => {
+  it('invalid JSON / version too high / missing cells all throw DocValidationError', () => {
     expect(() => parseDocJson('{ not json')).toThrow(DocValidationError);
     expect(() => parseDocJson('{"schemaVersion":99,"cells":{}}')).toThrow(DocValidationError);
     expect(() => parseDocJson('{"schemaVersion":1}')).toThrow(DocValidationError);
   });
 
-  it('丢弃结构非法的条目并计数，缺格补齐', () => {
+  it('drops structurally invalid entries and counts them, fills in missing cells', () => {
     const text = JSON.stringify({
       schemaVersion: 1,
       deviceId: 'd-x',
@@ -91,7 +91,7 @@ describe('导出 / 导入', () => {
     expect(doc.cells['individual-external']).toEqual([]);
   });
 
-  it('merge：新增不重复的条目，跳过 id 重复与链接重复', () => {
+  it('merge: adds non-duplicate entries, skips duplicate ids and duplicate links', () => {
     const base = docWith([
       {
         cell: 'general-internal',
@@ -148,7 +148,7 @@ describe('导出 / 导入', () => {
     expect(totalCount(doc.cells)).toBe(3);
   });
 
-  it('exportFileName 形如 modding-checklist-YYYYMMDD.json', () => {
+  it('exportFileName looks like modding-checklist-YYYYMMDD.json', () => {
     expect(exportFileName(new Date(2026, 8, 10))).toBe('modding-checklist-20260910.json');
   });
 });

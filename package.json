@@ -1,10 +1,10 @@
 {
   "name": "sloppy-modding-checklist-ext",
-  "version": "0.4.0",
+  "version": "0.1.0",
   "private": true,
   "license": "MIT",
   "type": "module",
-  "description": "Sloppy Modding Checklist — Chrome/Edge (Manifest V3) extension. 在 beatmap discussion 上维护 General/Individual × Internal/External 四格 modding checklist。",
+  "description": "Sloppy Modding Checklist — Chrome/Edge (Manifest V3) extension. Maintain a modding checklist on osu! beatmap discussions, organized into four cells (General/Individual × Internal/External), with each Individual entry tagged by the difficulty it applies to.",
   "engines": {
     "node": ">=18"
   },

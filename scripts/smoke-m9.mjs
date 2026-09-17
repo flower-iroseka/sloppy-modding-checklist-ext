@@ -37,7 +37,7 @@ function check(label, ok, detail) {
 const list = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
 const target = list.find((t) => t.type === 'page');
 if (!target) {
-  console.error('没有可用的标签页');
+  console.error('no usable tab');
   process.exit(2);
 }
 const ws = new WebSocket(target.webSocketDebuggerUrl);
@@ -170,21 +170,21 @@ async function checkNoLeaks(label, allowCjk) {
   //   * the same guard also blocks URLs (`dav` in `dav.jianguoyun.com` isn't in the prefix
   //     list, but a domain that was would no longer be a false positive either).
   const KEYISH =
-    /(?<![-\w])(?:err|sync|checklist|card|entry|data|popup|content|folder|oauth|settings|nav|common|scope|source|provider|strategy|plan|help|toast|action)\.[a-zA-Z][\w.-]*/;
-  check(`${label}：没有未替换的占位符`, !/\{[a-zA-Z_]+\}/.test(body), body.match(/\{[a-zA-Z_]+\}/)?.[0]);
-  check(`${label}：没有把 key 原样印出来`, !KEYISH.test(body), body.match(KEYISH)?.[0]);
+    /(?<![-\w])(?:err|sync|checklist|card|entry|data|popup|content|folder|oauth|settings|nav|common|scope|source|difficulty|provider|strategy|plan|help|toast|action)\.[a-zA-Z][\w.-]*/;
+  check(`${label}: no unreplaced placeholders`, !/\{[a-zA-Z_]+\}/.test(body), body.match(/\{[a-zA-Z_]+\}/)?.[0]);
+  check(`${label}: no keys printed verbatim`, !KEYISH.test(body), body.match(KEYISH)?.[0]);
   // The `**bold**` markup in the catalog only gets rendered by `<RichText>`. Miss that step
   // and a pair of asterisks shows up on the page -- like the three checks above, a failure that
   // looks like a normal render (`**Submit**` just reads as a few extra symbols), so it gets
   // swept in with the rest.
-  check(`${label}：没有漏出来的 ** 标记`, !/\*\*/.test(body), body.match(/\S*\*\*\S*/)?.[0]);
+  check(`${label}: no leaked ** markup`, !/\*\*/.test(body), body.match(/\S*\*\*\S*/)?.[0]);
   check(
-    `${label}：没有 undefined / [object Object]`,
+    `${label}: no undefined / [object Object]`,
     !/undefined|\[object Object\]/.test(body),
     body.match(/undefined|\[object Object\]/)?.[0],
   );
   if (!allowCjk) {
-    check(`${label}：没有汉字残留`, !/[一-鿿]/.test(body), body.match(/[一-鿿][^ ]*/)?.[0]);
+    check(`${label}: no leftover Han characters`, !/[一-鿿]/.test(body), body.match(/[一-鿿][^ ]*/)?.[0]);
   }
 }
 
@@ -238,13 +238,13 @@ const seedAsciiData = () =>
 // way, not one seeded ASCII entry survived.
 // The popup is a separate realm, read-only with no persistence loop, so it's the safest host.
 await goto(POPUP, '.pu');
-check('灌入的 ASCII 条目真的进了 storage', (await seedAsciiData()) === 2);
+check('the seeded ASCII entries really landed in storage', (await seedAsciiData()) === 2);
 await goto(APP, '.app');
 await openSettings();
 
-check('设置页有语言下拉框', await exists('[data-role="locale-select"]'));
+check('settings page has a language dropdown', await exists('[data-role="locale-select"]'));
 check(
-  '三个选项按 auto / zh / en 排列',
+  'the three options are ordered auto / zh / en',
   JSON.stringify(
     await evaluate(
       `[...document.querySelectorAll('[data-role="locale-select"] option')].map((o) => o.value)`,
@@ -252,7 +252,7 @@ check(
   ) === JSON.stringify(['auto', 'zh', 'en']),
 );
 check(
-  '语言名用**它自己的写法**（中文不译成 Chinese）',
+  'language names use **their own spelling** (Chinese is not translated to "Chinese")',
   JSON.stringify(
     await evaluate(
       `[...document.querySelectorAll('[data-role="locale-select"] option')].map((o) => o.textContent.trim()).slice(1)`,
@@ -260,53 +260,53 @@ check(
   ) === JSON.stringify(['中文', 'English']),
 );
 
-check('语言面板在设置页里', await exists('.panel__title'));
+check('the language panel is on the settings page', await exists('.panel__title'));
 
 // ================================================================ 2. Switch to English
 
 const beforeEn = await setSelect('[data-role="locale-select"]', 'en');
-check('切换前不是英文', beforeEn === 'auto' || beforeEn === 'zh', String(beforeEn));
+check('not English before the switch', beforeEn === 'auto' || beforeEn === 'zh', String(beforeEn));
 await sleep(400);
 
 check(
-  '切英文后下拉框停在 en',
+  'the dropdown stays on en after switching to English',
   (await currentSetting()) === 'en',
   String(await currentSetting()),
 );
 check(
-  '标签页变成英文',
+  'the tabs switch to English',
   (await text('.app__tab[data-tab="checklist"]')) === 'Checklist' &&
     (await text('.app__tab[data-tab="settings"]')) === 'Settings',
   `${await text('.app__tab[data-tab="checklist"]')} / ${await text('.app__tab[data-tab="settings"]')}`,
 );
-check('设置页标题变成 Settings', (await text('.view__title')) === 'Settings');
-check('数据面板标题变成 Data', (await text('[data-panel="data"] .panel__title')) === 'Data');
-check('数据面板的统计项也是英文', (await text('[data-panel="data"] .stats__item dt')) === 'Entries');
+check('settings page title becomes Settings', (await text('.view__title')) === 'Settings');
+check('data panel title becomes Data', (await text('[data-panel="data"] .panel__title')) === 'Data');
+check('the data panel stat label is English too', (await text('[data-panel="data"] .stats__item dt')) === 'Entries');
 check(
-  '同步面板标题也是英文',
+  'sync panel title is English too',
   (await evaluate(`[...document.querySelectorAll('.panel__title')].map((e) => e.textContent.trim()).join('|')`))
     .includes('Sync'),
 );
-await checkNoLeaks('英文设置页', false);
+await checkNoLeaks('English settings page', false);
 
 // Back to the Checklist page for the list caption -- that sentence is split into three pieces
 // around <strong>, the easiest place to get the wiring wrong
 await evaluate(`document.querySelector('.app__tab[data-tab="checklist"]')?.click()`);
 await sleep(300);
 const meta = await text('.view__meta');
-check('列表说明变成英文', /Total/.test(meta) && /in total/.test(meta), meta);
+check('the list caption becomes English', /Total/.test(meta) && /in total/.test(meta), meta);
 // Match on the count rather than "is there a number": the latter is also green when the list
 // is empty (`共 0 条`), which is exactly when the "no Han characters on the page" round below
 // scans nothing.
-check('列表说明里的数字还在（切段没把 <strong> 挤掉）', /Total 2 in total/.test(meta), meta);
+check('the number is still in the list caption (splitting it up did not drop the <strong>)', /Total 2 in total/.test(meta), meta);
 check(
-  '页面上真的渲染出了卡片（否则下面的残渣扫描等于没扫）',
+  'cards really rendered on the page (otherwise the leftover scan below checks nothing)',
   (await evaluate(`document.querySelectorAll('.card').length`)) === 2,
   String(await evaluate(`document.querySelectorAll('.card').length`)),
 );
-await checkNoLeaks('英文 Checklist 页', false);
+await checkNoLeaks('English Checklist page', false);
 check(
-  '格名仍是 General / Individual（术语不随语言变）',
+  'zone names are still General / Individual (terms do not change with the language)',
   (await evaluate(
     `[...document.querySelectorAll('.col__heading')].map((e) => e.textContent.trim()).join(',')`,
   )) === 'General,Individual',
@@ -316,13 +316,13 @@ check(
 
 await goto(APP, '.app');
 await openSettings();
-check('刷新后仍是 en（设置真的落盘了）', (await currentSetting()) === 'en', String(await currentSetting()));
-check('刷新后界面仍是英文', (await text('.view__title')) === 'Settings');
+check('still en after reload (the setting really persisted)', (await currentSetting()) === 'en', String(await currentSetting()));
+check('the UI is still English after reload', (await text('.view__title')) === 'Settings');
 
 // The popup is a separate realm, so it reads storage itself -- a handy extra check while we're here
 await goto(POPUP, '.pu');
 check(
-  'popup 也读到了英文设置',
+  'the popup picks up the English setting too',
   (await evaluate(`document.querySelector('.pu__open')?.textContent.trim() ?? null`)) ===
     'Open the Checklist page',
   await text('.pu__open'),
@@ -334,9 +334,9 @@ await goto(APP, '.app');
 await openSettings();
 await setSelect('[data-role="locale-select"]', 'zh');
 await sleep(400);
-check('切回中文后标题是中文', (await text('.view__title')) === '设置', await text('.view__title'));
-check('切回中文后数据面板是中文', (await text('[data-panel="data"] .panel__title')) === '数据');
-await checkNoLeaks('中文设置页', true);
+check('the title is Chinese after switching back', (await text('.view__title')) === '设置', await text('.view__title'));
+check('the data panel is Chinese after switching back', (await text('[data-panel="data"] .panel__title')) === '数据');
+await checkNoLeaks('Chinese settings page', true);
 
 // ================================================================ 5. auto follows the browser
 
@@ -349,9 +349,9 @@ const autoExpected = await evaluate(`(() => {
 })()`);
 const autoTitle = await text('.view__title');
 check(
-  'auto 跟随浏览器语言（认不出的落到英文）',
+  'auto follows the browser language (an unrecognized one falls back to English)',
   autoTitle === (autoExpected === 'zh' ? '设置' : 'Settings'),
-  `浏览器=${autoExpected} 面板标题=${autoTitle}`,
+  `browser=${autoExpected} panel title=${autoTitle}`,
 );
 
 // Wrap up: restore the setting to auto so we don't leave a pinned language for later scripts
@@ -412,9 +412,9 @@ if (targetUrl) {
   // catch up.
   await sleep(600);
 
-  check('真站上注入了 FAB', await exists('#mc-fab'));
+  check('FAB injected on the real site', await exists('#mc-fab'));
   check(
-    'FAB 的 title / aria-label 是同一句、且非空',
+    "the FAB's title / aria-label are the same string and not empty",
     await evaluate(`(() => {
       const fab = document.getElementById('mc-fab');
       if (!fab) return false;
@@ -425,7 +425,7 @@ if (targetUrl) {
 
   const fabTitle = await evaluate(`document.getElementById('mc-fab')?.title ?? null`);
   check(
-    'FAB 的 title 跟设置里的语言走（钉的是 en，所以该是英文）',
+    "the FAB's title follows the language in the settings (pinned to en, so it should be English)",
     typeof fabTitle === 'string' && /^Open /.test(fabTitle),
     String(fabTitle),
   );
@@ -434,13 +434,13 @@ if (targetUrl) {
     const btns = [...document.querySelectorAll('.mc-add-btn')];
     return { n: btns.length, text: btns[0]?.textContent.trim() ?? null, title: btns[0]?.title ?? null };
   })()`);
-  check('注入了「＋」按钮', addBtns.n > 0, `n=${addBtns.n}`);
+  check('the "＋" button was injected', addBtns.n > 0, `n=${addBtns.n}`);
   check(
-    '「＋」按钮的文字也是英文',
+    'the "＋" button text is English too',
     typeof addBtns.text === 'string' && /^\+ Add to Checklist$/.test(addBtns.text),
     String(addBtns.text),
   );
-  check('「＋」按钮的 title 也跟上了', /checklist/i.test(String(addBtns.title)), String(addBtns.title));
+  check('the "＋" button title follows too', /checklist/i.test(String(addBtns.title)), String(addBtns.title));
 
   // Wrap up: restore the language to auto so we don't leave a pinned en for later scripts
   await goto(APP, '.app');
@@ -448,7 +448,7 @@ if (targetUrl) {
   await setSelect('[data-role="locale-select"]', 'auto');
   await sleep(300);
 } else {
-  console.log('SKIP  内容脚本注入的字（没找到可用的 discussion 页面）');
+  console.log('SKIP  text injected by the content script (no usable discussion page found)');
 }
 
 // ---------------------------------------------------------------- Wrap up

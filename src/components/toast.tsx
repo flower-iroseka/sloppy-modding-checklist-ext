@@ -13,7 +13,7 @@ interface ToastItem {
 }
 
 /**
- * Minimal toast (CODING_PLAN §1.2 "保存 → 轻提示").
+ * Minimal toast (CODING_PLAN §1.2 "save → toast").
  * Module-level subscription; the app page and the content script each hold their own
  * instance without interfering with each other.
  */
@@ -60,8 +60,8 @@ function getSnapshot(): readonly ToastItem[] {
 export function ToastHost() {
   const list = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
   // polite and assertive are region-level attributes and a container can only pick one; and
-  // the two kinds of toast deserve different weight anyway -- "已保存" is a casual mention
-  // that shouldn't interrupt what the screen reader is reading, while "复制失败" is
+  // the two kinds of toast deserve different weight anyway -- "Saved" is a casual mention
+  // that shouldn't interrupt what the screen reader is reading, while "Copy failed" is
   // information the next step depends on and has to be able to cut in. So two regions.
   const calm = list.filter((t) => t.kind !== 'error');
   const urgent = list.filter((t) => t.kind === 'error');

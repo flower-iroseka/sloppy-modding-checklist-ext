@@ -43,7 +43,7 @@ const target =
   list.find((t) => t.type === 'page' && t.url.includes('app.html')) ??
   list.find((t) => t.type === 'page');
 if (!target) {
-  console.error('没有可用的标签页');
+  console.error('no usable tab');
   process.exit(2);
 }
 const ws = new WebSocket(target.webSocketDebuggerUrl);
@@ -90,7 +90,7 @@ async function waitFor(expression, label, tries = 200, gap = 150) {
     if (last) return last;
     await sleep(gap);
   }
-  console.log(`  · 等待超时（${label}）：${expression}`);
+  console.log(`  · wait timed out (${label}): ${expression}`);
   return last;
 }
 
@@ -103,7 +103,7 @@ async function click(selector) {
   const how = await clickSelector(send, evaluate, `document.querySelector(${JSON.stringify(selector)})`, {
     sleep,
   });
-  if (how === 'missing') throw new Error(`找不到：${selector}`);
+  if (how === 'missing') throw new Error(`not found: ${selector}`);
 }
 
 /**
@@ -131,14 +131,14 @@ await send('Emulation.setDeviceMetricsOverride', {
 
 await bringToFront(send);
 await send('Page.navigate', { url: APP });
-await waitFor(`!!window.__mc && window.__mc.state().hydrated`, 'app 水合');
+await waitFor(`!!window.__mc && window.__mc.state().hydrated`, 'app hydrated');
 await warnIfHidden(evaluate);
 await evaluate(`(async () => { window.__mc.clearAll(); await window.__mc.flush(); })()`);
 await sleep(250);
 
 // ---------------------------------------------------------------- 1) Forum post -> author
 
-console.log('== 1) 粘贴论坛帖子永久链接，应该解析出作者 ==');
+console.log('== 1) paste a forum post permalink, it should resolve the author ==');
 await click('.zone[data-cell="general-internal"] .zone__add');
 await sleep(400);
 await typeText('#mc-summary', '论坛帖作者解析冒烟');
@@ -153,10 +153,10 @@ const chip = await waitFor(
      const text = el.textContent.trim();
      return text === '读取作者…' ? null : text;
    })()`,
-  '论坛作者解析',
+  'forum author resolution',
 );
-console.log(`  · 链接行上的作者显示：${JSON.stringify(chip)}`);
-check('从论坛帖子链接解析出作者', chip === FORUM_AUTHOR, `显示=${JSON.stringify(chip)} 期望=${FORUM_AUTHOR}`);
+console.log(`  · author shown on the link row: ${JSON.stringify(chip)}`);
+check('author resolved from the forum post link', chip === FORUM_AUTHOR, `got=${JSON.stringify(chip)} want=${FORUM_AUTHOR}`);
 
 await click('.mc-modal__foot .btn--accent');
 await sleep(700);
@@ -168,10 +168,10 @@ const stored = await waitFor(
      const hit = all.find((e) => (e.links ?? []).includes(${JSON.stringify(FORUM_POST)}));
      return hit ? { links: hit.links, linkAuthors: hit.linkAuthors ?? null } : null;
    })()`,
-  '条目落盘',
+  'entry written to storage',
 );
 check(
-  '解析结果写进 storage 的 linkAuthors',
+  'resolved author written to storage linkAuthors',
   stored?.linkAuthors?.[FORUM_POST]?.username === FORUM_AUTHOR,
   JSON.stringify(stored?.linkAuthors),
 );
@@ -180,11 +180,11 @@ const cardText = await evaluate(`(() => {
   const a = document.querySelector('.card__link');
   return a ? a.textContent.trim() : null;
 })()`);
-check('卡片上显示「序号 + 作者」', cardText === `①${FORUM_AUTHOR}`, JSON.stringify(cardText));
+check('card shows "index + author"', cardText === `①${FORUM_AUTHOR}`, JSON.stringify(cardText));
 
 // ---------------------------------------------------------------- 2) Fallback labels
 
-console.log('\n== 2) 解析不出作者时，卡片上的兜底标签 ==');
+console.log('\n== 2) fallback labels on the card when no author resolves ==');
 await evaluate(`(async () => {
   window.__mc.clearAll();
   window.__mc.addEntry({ scope:'general', source:'internal', summary:'只有 topic，没有具体帖子', links:[${JSON.stringify(FORUM_TOPIC)}] });
@@ -196,7 +196,7 @@ await evaluate(`(async () => {
 await sleep(900);
 
 const labels = await evaluate(`(() => [...document.querySelectorAll('.card__link')].map((a) => a.textContent.trim()))()`);
-console.log(`  · 卡片标签：${JSON.stringify(labels)}`);
+console.log(`  · card labels: ${JSON.stringify(labels)}`);
 
 /**
  * Pick the card text that contains `needle` and assert its fallback label is `①<want>`.
@@ -210,10 +210,10 @@ const expectLabel = (needle, want, describe) => {
   check(describe, got === `①${want}`, JSON.stringify(got));
 };
 
-expectLabel('forum', 'forum topic 2216866', '没带 ?start= 的 topic → forum topic <id>');
-expectLabel('youtube', 'youtube.com', 'YouTube → 域名（不是光秃秃的 watch）');
-expectLabel('docs.', 'docs.google.com', 'Google Docs → 域名（不是光秃秃的 edit）');
-expectLabel('user', 'user 26595459', 'osu 用户主页 → user <id>');
+expectLabel('forum', 'forum topic 2216866', 'topic without ?start= → forum topic <id>');
+expectLabel('youtube', 'youtube.com', 'YouTube → domain (not a bare watch)');
+expectLabel('docs.', 'docs.google.com', 'Google Docs → domain (not a bare edit)');
+expectLabel('user', 'user 26595459', 'osu user profile → user <id>');
 
 // Wrap up
 await evaluate(`(async () => { window.__mc.clearAll(); await window.__mc.flush(); })()`);

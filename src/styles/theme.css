@@ -21,6 +21,15 @@
   --danger: #ff7a90;           /* errors, dangerous actions */
   --radius: 10px;              /* corner radius for panels and overlays */
   --radius-sm: 6px;            /* small things like buttons and inputs */
+  /* osu!'s five difficulty colours, one per tier, sampled from the osu!-mode difficulty
+     icons on the wiki. Used by the tier marker on a card. They live here rather than in
+     app.css because theme.css is the one stylesheet the content script also injects into
+     its shadow root, so the Checklist page and the injected overlay get the same palette. */
+  --diff-easy: #4ebfff;
+  --diff-normal: #66ff91;
+  --diff-hard: #f7e85d;
+  --diff-insane: #ff7e68;
+  --diff-expert: #fe3c71;
   /* UI font. System fonts only, falling back in order; no webfont bundled with the extension. */
   --font: Inter, 'Segoe UI', system-ui, -apple-system, sans-serif;
   /* Base font size: the body text on an osu discussion page is 15px, so this is 16px, one
@@ -136,7 +145,7 @@ a:hover {
   font-size: 14px;
 }
 
-/* Success line (e.g. "连接正常"). */
+/* Success line (e.g. "Connection OK"). */
 .ok-text {
   color: var(--accent);
   font-size: 14px;

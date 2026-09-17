@@ -29,7 +29,7 @@ export interface ApiCtx {
  */
 export interface OAuthApi {
   /**
-   * "测试连接": reachable and authenticated → resolve.
+   * "Test connection": reachable and authenticated → resolve.
    *
    * @param ctx fetch and the current access token
    * @throws {SyncError} can't connect, or authentication failed
@@ -88,8 +88,8 @@ export interface OAuthProviderDeps extends FetchDeps {
  * the server really is down (retrying helps), or we sent a bad request ourselves (retrying
  * ten thousand times changes nothing). A real example of the latter is putting an RPC
  * endpoint's params into the `Dropbox-API-Arg` header (see `dropbox.ts#test`) -- Dropbox
- * just returns a 500, so "服务端错误，稍后可重试" sends people in entirely the wrong
- * direction. Carrying the raw text at least shows that "稍后再试" isn't going to fix it.
+ * just returns a 500, so "server error, you can retry later" sends people in entirely the wrong
+ * direction. Carrying the raw text at least shows that "Try again later" isn't going to fix it.
  *
  * Truncated to 200 characters: some gateways return a whole page of HTML on error, and that
  * makes the message unreadable.
@@ -157,8 +157,9 @@ export function apiError(
  *
  * When a refresh fails, delete this provider's record: leaving a record that can't be
  * refreshed means the user hits the same wall on every sync while the settings page still
- * shows "已连接" -- the most baffling state there is. After deleting it, the settings page
- * goes back to "未连接" and the button goes back to "连接", so the user knows what to click.
+ * shows "● Connected" -- the most baffling state there is. After deleting it, the settings
+ * page goes back to "○ Not connected" and the button goes back to "Save and connect", so the
+ * user knows what to click.
  *
  * @param deps token storage and fetch
  * @param spec this provider's spec
@@ -223,8 +224,8 @@ export function createOAuthProvider(
      * Only checks whether it's filled in completely, not whether it's authorized -- this
      * method has to be synchronous (that's how the §7.1 interface is defined), and the
      * authorization state is in storage. When not connected, `test` / `read` / `write`
-     * throw a "请先在设置页点连接" line, which is more accurate than anything this could
-     * say.
+     * throw a "{provider} is not connected yet. Click 'Connect' in Settings first." line,
+     * which is more accurate than anything this could say.
      */
     isConfigured(cfg) {
       const c = cfg as OAuthConfig;

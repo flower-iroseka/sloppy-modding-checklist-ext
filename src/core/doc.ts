@@ -1,4 +1,5 @@
 import { emptyCells, isScope, isSource, CELL_IDS } from './cells';
+import { isDifficulty } from './difficulty';
 import { newDeviceId, newId } from './ids';
 import {
   SCHEMA_VERSION,
@@ -127,6 +128,9 @@ export function normalizeEntry(raw: unknown, now: number = Date.now()): Checklis
   const sourceAuthor = normalizeAuthor(entry.sourceAuthor);
   const meta = normalizeMeta(entry.meta);
   const linkAuthors = normalizeLinkAuthors(entry.linkAuthors);
+  // An unrecognized tier drops the field only, not the whole entry: unlike scope and source,
+  // nothing about the entry depends on it, and losing the text over a bad enum would be worse.
+  const difficulty = isDifficulty(entry.difficulty) ? entry.difficulty : undefined;
 
   return {
     id,
@@ -134,6 +138,7 @@ export function normalizeEntry(raw: unknown, now: number = Date.now()): Checklis
     source,
     summary,
     links: normalizeLinks(entry.links),
+    ...(difficulty ? { difficulty } : {}),
     ...(linkAuthors ? { linkAuthors } : {}),
     ...(note !== undefined ? { note } : {}),
     ...(sourceAuthor ? { sourceAuthor } : {}),

@@ -33,8 +33,8 @@ export async function warnIfHidden(evaluate) {
   if (warnedHidden) return false;
   if (await isInteractive(evaluate)) return false;
   warnedHidden = true;
-  console.log('  ! 环境：标签页是 hidden（锁屏 / 远程桌面断开时 Chrome 会丢弃合成鼠标事件）。');
-  console.log('  !     点击会退化成程序化 el.click()（不经过命中测试）；真实拖拽无法退化，会直接报环境错误。');
+  console.log('  ! env: the tab is hidden (Chrome drops synthetic mouse events when the screen is locked / the RDP session is disconnected).');
+  console.log('  !     Clicks fall back to a programmatic el.click() (no hit testing); real drags cannot fall back and report an environment error.');
   return true;
 }
 
@@ -153,7 +153,7 @@ export async function typeInto(send, evaluate, resolveExpr, text, { sleep } = {}
 export async function requireInteractive(evaluate, what) {
   if (await isInteractive(evaluate)) return;
   throw new Error(
-    `环境不可交互：标签页 hidden（锁屏 / 远程桌面断开）。${what}需要真实鼠标位移，无法退化——这不是代码回归。`,
+    `Environment is not interactive: the tab is hidden (screen locked / RDP disconnected). ${what} needs real mouse movement and cannot fall back -- this is not a code regression.`,
   );
 }
 

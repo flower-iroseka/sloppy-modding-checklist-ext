@@ -65,28 +65,28 @@ function fakeFetch(responses: (Response | (() => Response))[]) {
   return { calls, provider: createWebDavProvider({ fetch: fn as unknown as typeof fetch }) };
 }
 
-describe('URL 拼接与校验', () => {
-  it('集合地址不带文件名，文件地址带上', () => {
+describe('URL joining and validation', () => {
+  it('the collection URL has no file name, the file URL does', () => {
     expect(collectionUrl(cfg)).toBe('https://dav.example.com/dav');
     expect(remoteUrl(cfg)).toBe('https://dav.example.com/dav/modding-checklist.json');
   });
 
-  it('子目录两端斜杠都规整掉', () => {
+  it('extra slashes on either end of the subfolder are normalized away', () => {
     expect(collectionUrl({ ...cfg, path: '/osu/' })).toBe('https://dav.example.com/dav/osu');
   });
 
-  it('baseUrl 末尾多写的斜杠不会拼出双斜杠', () => {
+  it('a trailing slash on baseUrl does not produce a double slash', () => {
     expect(collectionUrl({ ...cfg, baseUrl: 'https://a.com/dav/' })).toBe('https://a.com/dav');
   });
 
-  it('configOrigin 只认 http(s)', () => {
+  it('configOrigin only accepts http(s)', () => {
     expect(configOrigin(cfg)).toBe('https://dav.example.com');
     expect(configOrigin({ ...cfg, baseUrl: 'ftp://a.com/x' })).toBeNull();
     expect(configOrigin({ ...cfg, baseUrl: 'dav.example.com' })).toBeNull();
     expect(configOriginPattern(cfg)).toBe('https://dav.example.com/*');
   });
 
-  it('validateConfig 逐项说缺什么', () => {
+  it('validateConfig names each missing item', () => {
     expect(validateConfig(cfg)).toBeNull();
     // The return value is a `Msg` (since M9), so render it to Chinese before looking for
     // the word -- that rendered sentence is what the user sees. Rendering here also pins
@@ -109,14 +109,14 @@ describe('URL 拼接与校验', () => {
     expect(say({ ...cfg, password: '' })).toMatch(/密码/);
   });
 
-  it('未启用的 provider 不算配置好', () => {
+  it('a disabled provider does not count as configured', () => {
     const { provider } = fakeFetch([]);
     expect(provider.isConfigured({ ...cfg, enabled: false })).toBe(false);
   });
 
   // btoa can't handle non-ASCII and throws InvalidCharacterError, which the user sees as
   // "clicking save crashes".
-  it('非 ASCII 账密不会让 authHeader 抛错', () => {
+  it('non-ASCII credentials do not make authHeader throw', () => {
     expect(() => authHeader({ ...cfg, username: '中文', password: '密码' })).not.toThrow();
     const decoded = Buffer.from(authHeader({ ...cfg, username: '中文', password: '密码' }).slice(6), 'base64').toString('utf8');
     expect(decoded).toBe('中文:密码');
@@ -124,7 +124,7 @@ describe('URL 拼接与校验', () => {
 });
 
 describe('test()', () => {
-  it('PROPFIND 收到 207 → 通过', async () => {
+  it('PROPFIND gets 207 -> passes', async () => {
     const { calls, provider } = fakeFetch([new Response('', { status: 207 })]);
     await provider.test(cfg);
     expect(calls[0].method).toBe('PROPFIND');
@@ -133,17 +133,17 @@ describe('test()', () => {
     expect(calls[0].headers.get('Authorization')).toBe(authHeader(cfg));
   });
 
-  it('PROPFIND 收到 401 → 说认证被拒，而不是「路径不存在」', async () => {
+  it('PROPFIND gets 401 -> say auth was rejected, not "path not found"', async () => {
     const { provider } = fakeFetch([new Response('', { status: 401 })]);
     await expect(provider.test(cfg)).rejects.toThrow(/认证/);
   });
 
-  it('PROPFIND 收到 404 → 指向路径/子目录', async () => {
+  it('PROPFIND gets 404 -> point at the path/subfolder', async () => {
     const { provider } = fakeFetch([new Response('', { status: 404 })]);
     await expect(provider.test(cfg)).rejects.toThrow(/路径/);
   });
 
-  it('服务器不认 PROPFIND（405）→ 退回探测文件；文件 404 说明「连得上，只是还没建」', async () => {
+  it('server rejects PROPFIND (405) -> fall back to a probe file; a 404 file means "reachable, just not created yet"', async () => {
     const { calls, provider } = fakeFetch([
       new Response('', { status: 405 }),
       new Response('', { status: 404 }),
@@ -153,7 +153,7 @@ describe('test()', () => {
     expect(calls[1].url).toContain('modding-checklist.json');
   });
 
-  it('PROPFIND 501 同样退回，文件存在（200）也算通过', async () => {
+  it('PROPFIND 501 falls back the same way, and an existing file (200) also passes', async () => {
     const { provider } = fakeFetch([
       new Response('', { status: 501 }),
       new Response('{}', { status: 200 }),
@@ -161,7 +161,7 @@ describe('test()', () => {
     await expect(provider.test(cfg)).resolves.toBeUndefined();
   });
 
-  it('退回后仍然 401 → 抛认证错误', async () => {
+  it('still 401 after the fallback -> throws an auth error', async () => {
     const { provider } = fakeFetch([
       new Response('', { status: 405 }),
       new Response('', { status: 401 }),
@@ -169,13 +169,13 @@ describe('test()', () => {
     await expect(provider.test(cfg)).rejects.toThrow(/认证/);
   });
 
-  it('配置没填全时不上网，直接抛', async () => {
+  it('does not go to the network when the config is incomplete, it throws right away', async () => {
     const { calls, provider } = fakeFetch([]);
     await expect(provider.test({ ...cfg, password: '' })).rejects.toThrow(/密码/);
     expect(calls).toEqual([]);
   });
 
-  it('连不上时错误里带主机名，且标成可重试', async () => {
+  it('when it cannot connect the error carries the host name and is marked retryable', async () => {
     const provider = createWebDavProvider({
       fetch: (async () => {
         throw new TypeError('fetch failed');
@@ -189,12 +189,12 @@ describe('test()', () => {
 });
 
 describe('read()', () => {
-  it('404 → null（远端还没文件不是错误）', async () => {
+  it('404 -> null (no file on the remote yet is not an error)', async () => {
     const { provider } = fakeFetch([new Response('', { status: 404 })]);
     expect(await provider.read(cfg)).toBeNull();
   });
 
-  it('200 → 原文 + Last-Modified 兜底时钟', async () => {
+  it('200 -> the body plus Last-Modified as the fallback clock', async () => {
     const { provider } = fakeFetch([
       new Response('{"a":1}', {
         status: 200,
@@ -206,12 +206,12 @@ describe('read()', () => {
     expect(doc?.modifiedAt).toBe(Date.parse('Wed, 01 Jan 2025 00:00:00 GMT'));
   });
 
-  it('没有 Last-Modified 时不编一个时间出来', async () => {
+  it('does not make up a time when there is no Last-Modified', async () => {
     const { provider } = fakeFetch([new Response('{"a":1}', { status: 200 })]);
     expect((await provider.read(cfg))?.modifiedAt).toBeUndefined();
   });
 
-  it('500 → 抛错并标成可重试', async () => {
+  it('500 -> throws and is marked retryable', async () => {
     const { provider } = fakeFetch([new Response('', { status: 500 })]);
     const err = await provider.read(cfg).catch((e: unknown) => e);
     expect((err as SyncError).retryable).toBe(true);
@@ -219,7 +219,7 @@ describe('read()', () => {
 });
 
 describe('write()', () => {
-  it('PUT 到文件地址，带 JSON content-type 与 basic auth', async () => {
+  it('PUTs to the file URL with a JSON content-type and basic auth', async () => {
     const { calls, provider } = fakeFetch([new Response('', { status: 201 })]);
     await provider.write(cfg, '{"a":1}');
 
@@ -230,12 +230,12 @@ describe('write()', () => {
     expect(calls[0].body).toBe('{"a":1}');
   });
 
-  it('403 → 抛错，且提示检查账号密码', async () => {
+  it('403 -> throws, suggesting a check of the username and password', async () => {
     const { provider } = fakeFetch([new Response('', { status: 403 })]);
     await expect(provider.write(cfg, '{}')).rejects.toThrow(/认证/);
   });
 
-  it('非 ASCII 密码走完整链路也不抛', async () => {
+  it('a non-ASCII password goes through the whole path without throwing', async () => {
     const { provider } = fakeFetch([new Response('', { status: 201 })]);
     await expect(
       provider.write({ ...cfg, username: '用户', password: '密' }, '{}'),

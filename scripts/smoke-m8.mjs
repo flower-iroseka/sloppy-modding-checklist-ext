@@ -36,7 +36,7 @@ function check(label, ok, detail) {
 const list = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
 const target = list.find((t) => t.type === 'page');
 if (!target) {
-  console.error('没有可用的标签页');
+  console.error('no usable tab');
   process.exit(2);
 }
 const ws = new WebSocket(target.webSocketDebuggerUrl);
@@ -203,24 +203,24 @@ const totalIn = async (cell) => (await entryIds(cell)).length;
 await goto(APP);
 await send('Page.bringToFront').catch(() => {});
 const hidden = await warnIfHidden(evaluate);
-console.log(`  标签页可见：${hidden ? '否（将退化）' : '是'}`);
-console.log('  注：键盘走合成事件、焦点断言不经过合成器，所以本脚本不受 occluded 影响。');
+console.log(`  tab visible: ${hidden ? 'no (will fall back)' : 'yes'}`);
+console.log('  note: keyboard goes through synthetic events and the focus assertions never touch the compositor, so an occluded tab does not affect this script.');
 
 await clearAll();
 
 // ================================================================ Empty-state entry points
 
 const EMPTY_ADD = '[data-action="zone-empty-add"]';
-check('四个区的空态各有一个「添加一条」', (await count(EMPTY_ADD)) === 4, String(await count(EMPTY_ADD)));
+check('each of the four zones has one "add an entry" in its empty state', (await count(EMPTY_ADD)) === 4, String(await count(EMPTY_ADD)));
 
 // The "＋" sits in the top right of the zone heading and is only 22px; the empty state's blank space is what a new user actually sees.
 check(
-  '空态入口的 aria-label 说清了会加到哪一格',
+  "the empty-state entry point's aria-label says which zone it adds to",
   (await attr(zoneAdd('individual-external'), 'aria-label')) === '新增到 Individual External',
   await attr(zoneAdd('individual-external'), 'aria-label'),
 );
 check(
-  '区标题那颗「＋」还在（空态入口是补充，不是替换）',
+  'the "＋" in the zone heading is still there (the empty-state entry point is a supplement, not a replacement)',
   (await count('[data-action="zone-empty-add"]')) === 4 && (await count('.zone__add')) === 4,
   `.zone__add = ${await count('.zone__add')}`,
 );
@@ -244,21 +244,21 @@ const emptyInsideList = await evaluate(`(() => {
   }
   return bad;
 })()`);
-check('四个区的空态中心都还在各自的拖放区里（smoke-m2 的落点依赖这个）', emptyInsideList.length === 0, JSON.stringify(emptyInsideList));
+check('the empty-state center is still inside the drop area of all four zones (smoke-m2 drops there)', emptyInsideList.length === 0, JSON.stringify(emptyInsideList));
 
 // --- Click the empty-state entry point -> the overlay preselects that cell -----------------------------------
 // focusClick instead of click here; see its comment for why (the first version went falsely
 // red because the opener came back as body).
 await focusClick(zoneAdd('general-external'));
 await sleep(250);
-check('点空态入口打开了浮层', await exists('.mc-modal'));
-check('浮层标题是「添加到 Checklist」', (await text('.mc-modal__title')) === '添加到 Checklist', await text('.mc-modal__title'));
+check('clicking the empty-state entry point opens the overlay', await exists('.mc-modal'));
+check('overlay title is "添加到 Checklist"', (await text('.mc-modal__title')) === '添加到 Checklist', await text('.mc-modal__title'));
 
 /** The option currently selected in each of the two segmented controls (`.mc-seg__opt--on` order = scope, source). */
 const segSelected = () =>
   evaluate(`[...document.querySelectorAll('.mc-seg__opt--on')].map((b) => b.textContent.trim())`);
 check(
-  '默认选中点进来的那一格（General × External）',
+  'preselects the zone it was opened from (General × External)',
   JSON.stringify(await segSelected()) === JSON.stringify(['General', 'External']),
   JSON.stringify(await segSelected()),
 );
@@ -266,9 +266,9 @@ check(
 // ================================================================ Focus: enter / cycle / return
 
 // --- Accessibility attributes ---------------------------------------------------------
-check('浮层是 role="dialog" + aria-modal', (await attr('.mc-modal__panel', 'role')) === 'dialog' && (await attr('.mc-modal__panel', 'aria-modal')) === 'true');
+check('the overlay is role="dialog" + aria-modal', (await attr('.mc-modal__panel', 'role')) === 'dialog' && (await attr('.mc-modal__panel', 'aria-modal')) === 'true');
 check(
-  '标题不是写死的 aria-label，而是 aria-labelledby 指向那颗真的 <h2>',
+  'the title is not a hardcoded aria-label but aria-labelledby pointing at the real <h2>',
   (await attr('.mc-modal__panel', 'aria-label')) === null &&
     (await evaluate(`(() => {
       const p = document.querySelector('.mc-modal__panel');
@@ -279,68 +279,68 @@ check(
   `aria-label=${await attr('.mc-modal__panel', 'aria-label')}`,
 );
 
-check('打开时焦点已经进了浮层（不用先 Tab 一遍）', await activeIs('#mc-summary'), await activeInfo());
+check('focus is already inside the overlay when it opens (no need to Tab first)', await activeIs('#mc-summary'), await activeInfo());
 
 // --- Wrapping at both ends -----------------------------------------------------------
-// Fill in the summary first: otherwise the "添加" button in the footer stays disabled,
+// Fill in the summary first: otherwise the "add" button in the footer stays disabled,
 // `focusablesIn` filters it out, and "the last one" is some element we don't care about.
 await typeInto('#mc-summary', '焦点循环用的一条');
 
 const LAST = '.mc-modal__foot .btn--accent';
 const FIRST = '.mc-modal__close';
-check('（前置）概述填上后页脚的「添加」可用了', (await evaluate(`!document.querySelector(${JSON.stringify(LAST)}).disabled`)) === true);
+check('(precondition) the footer "add" button is enabled once the summary is filled in', (await evaluate(`!document.querySelector(${JSON.stringify(LAST)}).disabled`)) === true);
 
 await evaluate(`document.querySelector(${JSON.stringify(LAST)}).focus()`);
-check('（前置）焦点停在了最后一个可聚焦元素上', await activeIs(LAST), await activeInfo());
+check('(precondition) focus sits on the last focusable element', await activeIs(LAST), await activeInfo());
 await key('Tab');
-check('最后一个再按 Tab → 回到第一个（不跑出浮层）', await activeIs(FIRST), await activeInfo());
+check('Tab on the last one → back to the first (it does not escape the overlay)', await activeIs(FIRST), await activeInfo());
 
 await evaluate(`document.querySelector(${JSON.stringify(FIRST)}).focus()`);
 await key('Tab', true);
-check('第一个再按 Shift+Tab → 跳到最后一个', await activeIs(LAST), await activeInfo());
+check('Shift+Tab on the first one → jumps to the last', await activeIs(LAST), await activeInfo());
 
 // Reverse case: middle positions must be let through. If the check above were written as "Tab always snaps to the first", these two would go red.
 await evaluate(`document.querySelector('#mc-summary').focus()`);
 await key('Tab');
-check('中间位置按 Tab 不被接管（浏览器自己的顺序说了算）', await activeIs('#mc-summary'), await activeInfo());
+check('Tab in a middle position is not taken over (the browser order decides)', await activeIs('#mc-summary'), await activeInfo());
 await key('Tab', true);
-check('中间位置按 Shift+Tab 同样不被接管', await activeIs('#mc-summary'), await activeInfo());
+check('Shift+Tab in a middle position is not taken over either', await activeIs('#mc-summary'), await activeInfo());
 
 // --- Esc closes + focus returns -------------------------------------------------
 await evaluate(`document.querySelector('#mc-note').focus()`);
 await key('Escape');
 await sleep(250);
-check('Esc 关掉浮层', !(await exists('.mc-modal')));
-check('关掉之后焦点回到打开它的那颗按钮（不用从头 Tab 一遍）', await activeIs(zoneAdd('general-external')), await activeInfo());
+check('Esc closes the overlay', !(await exists('.mc-modal')));
+check('after closing, focus goes back to the button that opened it (no Tab from the top again)', await activeIs(zoneAdd('general-external')), await activeInfo());
 
 // --- Opened from the "＋" -> it still returns -------------------------------------------------
 await focusClick('.zone[data-cell="general-internal"] .zone__add');
 await sleep(250);
-check('（前置）「＋」也能打开浮层', await exists('.mc-modal'));
+check('(precondition) the "＋" opens the overlay too', await exists('.mc-modal'));
 await key('Escape');
 await sleep(250);
-check('从「＋」进、Esc 出 → 焦点还回「＋」', await activeIs('.zone[data-cell="general-internal"] .zone__add'), await activeInfo());
+check('in through "＋", out with Esc → focus goes back to "＋"', await activeIs('.zone[data-cell="general-internal"] .zone__add'), await activeInfo());
 
 // ================================================================ Toasts and announcements
 
-check('toast 容器常驻（没有提示时也在 DOM 里）', await exists('.mc-toasts'), String(await count('.mc-toasts')));
+check('the toast container is always there (in the DOM even with no toast)', await exists('.mc-toasts'), String(await count('.mc-toasts')));
 check(
-  '两个 live region 都在，且分了 polite / assertive',
+  'both live regions exist, split into polite / assertive',
   (await exists('.mc-toasts [data-live="polite"]')) && (await exists('.mc-toasts [data-live="assertive"]')),
 );
 check(
-  '错误那一路的角色是 alert + assertive（能打断读屏器）',
+  'the error path has role alert + assertive (it can interrupt a screen reader)',
   (await attr('.mc-toasts [data-live="assertive"]', 'role')) === 'alert' &&
     (await attr('.mc-toasts [data-live="assertive"]', 'aria-live')) === 'assertive',
 );
 // An empty region must not take up space: the wrapper used `gap`, so two empty boxes would leave a gap in the middle and push the toasts off-center.
 check(
-  '空着的时候两个区域都不占地方（不然 toast 会被顶偏）',
+  'both regions take up no space while empty (otherwise the toasts get pushed off-center)',
   (await evaluate(`(() => {
     const r = document.querySelector('.mc-toasts').getBoundingClientRect();
     return Math.round(r.height);
   })()`)) === 0,
-  `高度 = ${await evaluate(`Math.round(document.querySelector('.mc-toasts').getBoundingClientRect().height)`)}`,
+  `height = ${await evaluate(`Math.round(document.querySelector('.mc-toasts').getBoundingClientRect().height)`)}`,
 );
 
 /** Text of all current toasts. */
@@ -356,10 +356,10 @@ await sleep(250);
 await typeInto('#mc-summary', 'M8 冒烟用的第一条');
 await click('.mc-modal__foot .btn--accent');
 await sleep(350);
-check('新增后提示「已添加」', (await toastTexts()).includes('已添加'), JSON.stringify(await toastTexts()));
-check('那条提示进的是 polite 区（不是打断型的）', (await regionTexts('polite')).includes('已添加'), JSON.stringify(await regionTexts('polite')));
-check('新条目真的落到了刚才那一格', (await totalIn('general-external')) === 1, String(await totalIn('general-external')));
-check('那一格的空态入口随之消失（只剩三个）', (await count(EMPTY_ADD)) === 3, String(await count(EMPTY_ADD)));
+check('after adding, the toast says "已添加"', (await toastTexts()).includes('已添加'), JSON.stringify(await toastTexts()));
+check('that toast goes into the polite region (not the interrupting one)', (await regionTexts('polite')).includes('已添加'), JSON.stringify(await regionTexts('polite')));
+check('the new entry really landed in the zone we clicked', (await totalIn('general-external')) === 1, String(await totalIn('general-external')));
+check('the empty-state entry point of that zone is gone with it (three left)', (await count(EMPTY_ADD)) === 3, String(await count(EMPTY_ADD)));
 
 // Writing to disk is debounced by 300ms and this background tab is throttled by Chrome, so in
 // practice it takes 1-2.5s (§12.2). A hardcoded sleep either goes falsely red or wastes time,
@@ -375,19 +375,19 @@ for (let i = 0; i < 20; i++) {
   if (stored === 1) break;
   await sleep(200);
 }
-check('落库了（不靠 flush，等它自己写完）', stored === 1, String(stored));
+check('written to storage (without flush, we let it finish on its own)', stored === 1, String(stored));
 
 // --- Note -> note saved ---------------------------------------------------
 const CARD = '.zone[data-cell="general-external"] .card';
 await click(`${CARD} .card__notebtn`);
 await sleep(200);
-check('点「备注」就地展开编辑器', await exists(`${CARD} .card__noteta`));
+check('clicking "note" expands the editor in place', await exists(`${CARD} .card__noteta`));
 await typeInto(`${CARD} .card__noteta`, '复现方式：开 HR');
 await click(`${CARD} .card__noteactions .btn--accent`);
 await sleep(350);
-check('保存备注后提示「备注已保存」', (await toastTexts()).includes('备注已保存'), JSON.stringify(await toastTexts()));
+check('after saving the note the toast says "备注已保存"', (await toastTexts()).includes('备注已保存'), JSON.stringify(await toastTexts()));
 check(
-  '备注真的写进去了',
+  'the note really got written in',
   (await evaluate(`window.__mc.doc().cells['general-external'][0].note ?? ''`)) === '复现方式：开 HR',
   await evaluate(`window.__mc.doc().cells['general-external'][0].note ?? ''`),
 );
@@ -395,15 +395,15 @@ check(
 // --- Delete (two clicks) -> deleted ------------------------------------------------
 await click(`${CARD} [aria-label="删除条目"]`);
 await sleep(200);
-check('第一下只是变成「确认删除」（这一下不该有 toast）', (await exists(`${CARD} [aria-label="确认删除"]`)) === true);
-check('第一下没有删掉任何东西', (await totalIn('general-external')) === 1, String(await totalIn('general-external')));
+check('the first click only turns into "确认删除" (no toast at this point)', (await exists(`${CARD} [aria-label="确认删除"]`)) === true);
+check('the first click deletes nothing', (await totalIn('general-external')) === 1, String(await totalIn('general-external')));
 
 await click(`${CARD} [aria-label="确认删除"]`);
 await sleep(350);
-check('第二下才真删', (await totalIn('general-external')) === 0, String(await totalIn('general-external')));
+check('only the second click really deletes', (await totalIn('general-external')) === 0, String(await totalIn('general-external')));
 // The card disappearing is feedback in itself, but "it disappeared" looks the same as "the click missed" -- especially once that button has already changed appearance.
-check('删除后有提示「已删除」', (await toastTexts()).includes('已删除'), JSON.stringify(await toastTexts()));
-check('那一格的空态入口回来了', (await count(EMPTY_ADD)) === 4, String(await count(EMPTY_ADD)));
+check('after deleting the toast says "已删除"', (await toastTexts()).includes('已删除'), JSON.stringify(await toastTexts()));
+check('the empty-state entry point of that zone is back', (await count(EMPTY_ADD)) === 4, String(await count(EMPTY_ADD)));
 
 // ================================================================ Announcements for the persistent notices
 
@@ -434,19 +434,19 @@ const about = await evaluate(`(() => {
     bodySize: parseFloat(getComputedStyle(box.querySelector('.panel__body')).fontSize),
   };
 })()`);
-check('设置页最下面有「关于」卡片', about !== null, JSON.stringify(about));
+check('there is an About card at the bottom of the settings page', about !== null, JSON.stringify(about));
 check(
-  '关于卡片里有作者与 license',
+  'the About card has the author and the license',
   /flower-iroseka/.test(about?.text ?? '') && /MIT/.test(about?.text ?? ''),
   about?.text,
 );
 check(
-  '关于卡片声明了 vibe coding',
+  'the About card declares vibe coding',
   /DeepSeek V4/.test(about?.text ?? ''),
   about?.text,
 );
 check(
-  '三个链接指对了地方',
+  'the three links point where they should',
   JSON.stringify(about?.hrefs) ===
     JSON.stringify([
       'https://github.com/flower-iroseka/sloppy-modding-checklist-ext',
@@ -456,7 +456,7 @@ check(
   JSON.stringify(about?.hrefs),
 );
 check(
-  '出处的说明用的是更小的字号',
+  'the attribution note uses a smaller font size',
   typeof about?.noteSize === 'number' && about.noteSize < about.bodySize,
   `${about?.noteSize}px vs ${about?.bodySize}px`,
 );
@@ -465,19 +465,19 @@ const ANNOUNCE = '[data-announce]';
 // The data panel: two, "result" + "failure"; the sync panel has one more than that -- the
 // conflict entry stands on its own (it has a question to say, not the result of an action).
 check(
-  '设置页里两个面板各自都有常驻播报区',
+  'each of the two panels on the settings page has its own persistent announcement region',
   (await count('[data-panel="data"] [data-announce]')) === 2 &&
     (await count('.panel:not([data-panel="data"]) [data-announce]')) === 3,
-  `数据 ${await count('[data-panel="data"] [data-announce]')} / 同步 ${await count('.panel:not([data-panel="data"]) [data-announce]')}`,
+  `data ${await count('[data-panel="data"] [data-announce]')} / sync ${await count('.panel:not([data-panel="data"]) [data-announce]')}`,
 );
 check(
-  '播报区有 polite / assertive 两种角色',
+  'the announcement regions have both polite / assertive roles',
   (await exists('[data-announce="polite"][role="status"]')) && (await exists('[data-announce="assertive"][role="alert"]')),
 );
 // The conflict region is always there, but it has to stay silent when there's no conflict --
 // otherwise a screen reader reads out "sync conflict: ..." the moment the page opens.
 check(
-  '没有冲突时，冲突那条播报区是空的',
+  'with no conflict, the conflict announcement region is empty',
   !(await evaluate(`[...document.querySelectorAll('[data-announce="assertive"]')].some((e) => /冲突/.test(e.textContent))`)),
 );
 // They're out of flow via `position: absolute`, so they don't push anything open in a flex/gap
@@ -492,21 +492,21 @@ const announceLayout = await evaluate(`(() => {
   }
   return bad;
 })()`);
-check('常驻播报区一律脱离文档流（零布局影响）', announceLayout.length === 0, JSON.stringify(announceLayout));
+check('persistent announcement regions are all out of flow (zero layout impact)', announceLayout.length === 0, JSON.stringify(announceLayout));
 
 // The visible line and the announced line have to be the same sentence -- write two copies and one side gets missed in a change sooner or later.
 const DATA_NOTICE = '[data-panel="data"] .ok-text';
 await click('[data-action="export-json"]');
 await sleep(400);
 const exportNotice = await text(DATA_NOTICE);
-check('（前置）导出后页面上出现了结果提示', /已导出/.test(exportNotice), exportNotice);
+check('(precondition) a result notice shows up on the page after export', /已导出/.test(exportNotice), exportNotice);
 check(
-  '同一句话也进了 polite 播报区（读屏器听得到）',
+  'the same sentence also goes into the polite announcement region (a screen reader can hear it)',
   (await evaluate(`[...document.querySelectorAll('[data-announce="polite"]')].map((e) => e.textContent.trim())`)).includes(exportNotice),
   JSON.stringify(await evaluate(`[...document.querySelectorAll('[data-announce="polite"]')].map((e) => e.textContent.trim())`)),
 );
 check(
-  '错误的播报区此时是空的（不是把成功也塞进 alert）',
+  'the error announcement region is empty at this point (success is not stuffed into alert)',
   (await text('[data-announce="assertive"]')) === '' ||
     !(await evaluate(`[...document.querySelectorAll('[data-announce="assertive"]')].map((e) => e.textContent.trim())`)).some((t) => /已导出/.test(t)),
 );
@@ -514,28 +514,28 @@ check(
 // ================================================================ popup
 
 await goto(POPUP, '[data-hydrated="true"]');
-check('popup 水合完成', (await attr('.pu', 'data-hydrated')) === 'true');
+check('popup hydrated', (await attr('.pu', 'data-hydrated')) === 'true');
 // The popup has only one kind of thing to announce: failing to read data / failing to open the
 // page. Both are "something went wrong", so there's just one assertive region -- don't squeeze
 // a polite one in for symmetry.
 check(
-  'popup 里有常驻播报区，而且是 assertive 的',
+  'the popup has a persistent announcement region, and it is assertive',
   (await count('[data-announce="assertive"][role="alert"]')) === 1,
   `assertive = ${await count('[data-announce="assertive"]')} / polite = ${await count('[data-announce="polite"]')}`,
 );
 check(
-  'popup 的播报区同样脱离文档流（它是 flex + gap，占位了会把按钮顶低）',
+  "the popup's announcement region is out of flow too (it is flex + gap, taking up space would push the buttons down)",
   (await evaluate(`[...document.querySelectorAll('[data-announce]')].every((el) => getComputedStyle(el).position === 'absolute')`)) === true,
 );
 // An empty state that only says "no records yet" just blocks you -- the copy has to point at both ways out.
 const emptyHint = await text('.pu__hint');
 check(
-  'popup 空态把两条路都说了（去 discussion 页收 / 打开页面手动加）',
+  'the popup empty state points at both ways out (collect on a discussion page / open the page and add by hand)',
   /discussion/i.test(emptyHint) && /Checklist/.test(emptyHint),
   emptyHint,
 );
 check(
-  'popup 空态没有再生一个和下面一样的主按钮',
+  'the popup empty state does not add a second primary button like the one below',
   (await count('.pu__open')) === 1,
   String(await count('.pu__open')),
 );
@@ -544,9 +544,9 @@ check(
 
 console.log('');
 if (failures.length === 0) {
-  console.log('全部通过（不联网）');
+  console.log('all passed (no network)');
 } else {
-  console.log(`${failures.length} 项失败：`);
+  console.log(`${failures.length} checks failed:`);
   for (const f of failures) console.log(`  - ${f}`);
 }
 ws.close();

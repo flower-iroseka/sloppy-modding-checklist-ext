@@ -21,7 +21,7 @@ describe('store CRUD', () => {
     resetStore();
   });
 
-  it('addEntry 落到对应格子并生成 id / 时间戳', () => {
+  it('addEntry lands in the right cell and generates an id / timestamp', () => {
     const entry = s().addEntry({
       scope: 'general',
       source: 'internal',
@@ -36,7 +36,7 @@ describe('store CRUD', () => {
     expect(totalCount(s().doc.cells)).toBe(1);
   });
 
-  it('四个格子各自独立计数', () => {
+  it('each of the four cells counts independently', () => {
     s().addEntry({ scope: 'general', source: 'internal', summary: 'a' });
     s().addEntry({ scope: 'general', source: 'external', summary: 'b' });
     s().addEntry({ scope: 'individual', source: 'external', summary: 'c' });
@@ -48,7 +48,7 @@ describe('store CRUD', () => {
     expect(totalCount(s().doc.cells)).toBe(3);
   });
 
-  it('updateEntry 修改字段但保持位置', () => {
+  it('updateEntry changes fields but keeps its position', () => {
     const a = s().addEntry({ scope: 'general', source: 'internal', summary: 'a' });
     s().addEntry({ scope: 'general', source: 'internal', summary: 'b' });
 
@@ -59,7 +59,7 @@ describe('store CRUD', () => {
     expect(list[0]!.note).toBe('备注');
   });
 
-  it('updateEntry 改 scope/source 时搬到目标格', () => {
+  it('updateEntry moves to the target cell when scope/source changes', () => {
     const a = s().addEntry({ scope: 'general', source: 'internal', summary: 'a' });
 
     s().updateEntry(a.id, { scope: 'individual', source: 'external' });
@@ -70,7 +70,7 @@ describe('store CRUD', () => {
     expect(s().doc.cells['individual-external'][0]!.source).toBe('external');
   });
 
-  it('removeEntry 删除指定条目', () => {
+  it('removeEntry deletes the given entry', () => {
     const a = s().addEntry({ scope: 'general', source: 'internal', summary: 'a' });
     s().addEntry({ scope: 'general', source: 'internal', summary: 'b' });
 
@@ -79,7 +79,7 @@ describe('store CRUD', () => {
     expect(s().doc.cells['general-internal'].map((e) => e.summary)).toEqual(['b']);
   });
 
-  it('moveEntry 跨格移动：更新 scope/source 并插入目标下标', () => {
+  it('moveEntry across cells: updates scope/source and inserts at the target index', () => {
     const a = s().addEntry({ scope: 'general', source: 'internal', summary: 'a' });
     s().addEntry({ scope: 'individual', source: 'external', summary: 'x' });
     s().addEntry({ scope: 'individual', source: 'external', summary: 'y' });
@@ -93,7 +93,7 @@ describe('store CRUD', () => {
     expect(dst[1]!.source).toBe('external');
   });
 
-  it('moveEntry 同格重排', () => {
+  it('moveEntry reorders within the same cell', () => {
     const a = s().addEntry({ scope: 'general', source: 'internal', summary: 'a' });
     s().addEntry({ scope: 'general', source: 'internal', summary: 'b' });
     s().addEntry({ scope: 'general', source: 'internal', summary: 'c' });
@@ -103,7 +103,7 @@ describe('store CRUD', () => {
     expect(s().doc.cells['general-internal'].map((e) => e.summary)).toEqual(['b', 'c', 'a']);
   });
 
-  it('moveEntry 空 id 不改变文档', () => {
+  it('moveEntry with an empty id does not change the doc', () => {
     s().addEntry({ scope: 'general', source: 'internal', summary: 'a' });
     const before = s().doc;
 
@@ -112,7 +112,7 @@ describe('store CRUD', () => {
     expect(s().doc).toBe(before);
   });
 
-  it('clearAll 清空但保留 deviceId', () => {
+  it('clearAll empties the cells but keeps deviceId', () => {
     s().addEntry({ scope: 'general', source: 'internal', summary: 'a' });
     const deviceId = s().doc.deviceId;
 
@@ -120,5 +120,68 @@ describe('store CRUD', () => {
 
     expect(totalCount(s().doc.cells)).toBe(0);
     expect(s().doc.deviceId).toBe(deviceId);
+  });
+});
+
+describe('store and the difficulty tier', () => {
+  beforeEach(() => {
+    resetStore();
+  });
+
+  it('addEntry stores the tier', () => {
+    const entry = s().addEntry({
+      scope: 'individual',
+      source: 'external',
+      summary: 'a',
+      difficulty: 'hard',
+    });
+    expect(entry.difficulty).toBe('hard');
+    expect(s().doc.cells['individual-external'][0]!.difficulty).toBe('hard');
+  });
+
+  it('addEntry without a tier stores no difficulty key at all', () => {
+    const entry = s().addEntry({ scope: 'general', source: 'internal', summary: 'a' });
+    expect('difficulty' in entry).toBe(false);
+  });
+
+  it('updateEntry can change the tier', () => {
+    // Regression guard for the filter in updateEntry's patch type: drop 'difficulty' from
+    // that union and the value is silently discarded here, with no error anywhere.
+    const a = s().addEntry({
+      scope: 'individual',
+      source: 'external',
+      summary: 'a',
+      difficulty: 'easy',
+    });
+
+    s().updateEntry(a.id, { difficulty: 'expert' });
+
+    expect(s().doc.cells['individual-external'][0]!.difficulty).toBe('expert');
+  });
+
+  it('updateEntry without a tier keeps the existing one', () => {
+    const a = s().addEntry({
+      scope: 'individual',
+      source: 'external',
+      summary: 'a',
+      difficulty: 'hard',
+    });
+
+    s().updateEntry(a.id, { summary: 'a2' });
+
+    expect(s().doc.cells['individual-external'][0]!.difficulty).toBe('hard');
+  });
+
+  it('moveEntry carries the tier across cells, even into General where it is not shown', () => {
+    const a = s().addEntry({
+      scope: 'individual',
+      source: 'external',
+      summary: 'a',
+      difficulty: 'insane',
+    });
+
+    s().moveEntry(a.id, 'general-internal');
+
+    expect(s().doc.cells['general-internal'][0]!.difficulty).toBe('insane');
   });
 });

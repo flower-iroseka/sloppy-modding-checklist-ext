@@ -29,14 +29,14 @@ function storedDoc(mem: MemoryStorage) {
   return mem.dump()[DOC_KEY] as { cells: Record<string, unknown[]>; deviceId: string } | undefined;
 }
 
-describe('持久化', () => {
+describe('persistence', () => {
   let mem: MemoryStorage;
 
   beforeEach(() => {
     mem = resetStore();
   });
 
-  it('hydrate：首次启动建空文档并落盘，deviceId 稳定', async () => {
+  it('hydrate: first start creates an empty doc and writes it, deviceId stays stable', async () => {
     await s().hydrate();
 
     expect(s().hydrated).toBe(true);
@@ -46,7 +46,7 @@ describe('持久化', () => {
     expect(totalCount(s().doc.cells)).toBe(0);
   });
 
-  it('CRUD → flush → 重新 hydrate：数据仍在（跨“刷新”往返）', async () => {
+  it('CRUD -> flush -> hydrate again: data is still there (survives a "refresh" round trip)', async () => {
     await s().hydrate();
     s().addEntry({
       scope: 'individual',
@@ -79,7 +79,7 @@ describe('持久化', () => {
     expect(list[0]!.meta).toEqual({ beatmapsetId: 9, mode: 'mania' });
   });
 
-  it('destroy/删除条目后 flush 也会落盘', async () => {
+  it('flush also writes after destroy/removing an entry', async () => {
     await s().hydrate();
     const a = s().addEntry({ scope: 'general', source: 'internal', summary: 'a' });
     s().addEntry({ scope: 'general', source: 'internal', summary: 'b' });
@@ -92,7 +92,7 @@ describe('持久化', () => {
     expect((doc.cells['general-internal'] as { summary: string }[]).map((e) => e.summary)).toEqual(['b']);
   });
 
-  it('自动持久化：变化后 debounce 到点才写盘', async () => {
+  it('auto-persist: writes only once the debounce elapses after a change', async () => {
     vi.useFakeTimers();
     try {
       const stop = startAutoPersist(300);
@@ -112,7 +112,7 @@ describe('持久化', () => {
     }
   });
 
-  it('没有本地改动时 flush 不写盘（被冻结过的标签页醒来不会盖回旧内容）', async () => {
+  it('flush does not write when there are no local changes (a frozen tab that wakes up will not put stale content back)', async () => {
     // Setup: this realm holds A (already persisted, not dirty), then another context
     // writes B. The real trigger is a background tab the browser has frozen -- while
     // frozen it can't run `storage.onChanged`, and when it wakes up `visibilitychange`
@@ -142,7 +142,7 @@ describe('持久化', () => {
     expect(afterA).not.toBe('另一个 realm');
   });
 
-  it('本地真有改动时照样写（上一条的负向对照）', async () => {
+  it('still writes when there really are local changes (negative control for the previous case)', async () => {
     // The previous test guards "don't write carelessly". This one guards that it doesn't
     // also block the writes that should happen -- without it, a plain `return` at the top
     // of `writeCurrent` would also make the previous test pass.
@@ -155,7 +155,7 @@ describe('持久化', () => {
     expect(totalCount(storedDoc(mem)!.cells as Parameters<typeof totalCount>[0])).toBe(before + 1);
   });
 
-  it('写盘失败会记录 lastError 而不抛异常', async () => {
+  it('a failed write records lastError instead of throwing', async () => {
     resetStore({
       ...createMemoryStorage(),
       // Override set to make it fail

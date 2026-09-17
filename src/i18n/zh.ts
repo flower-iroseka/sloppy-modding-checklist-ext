@@ -210,6 +210,15 @@ export const zh = {
   'source.internal': 'Internal',
   'source.external': 'External',
 
+  // Difficulty tiers. Same reasoning as the four cell names above: Easy / Normal / Hard /
+  // Insane / Expert are the words osu! itself uses, so both catalogs read the same. They
+  // still take keys, so a call site never has to know which labels happen to be identical.
+  'difficulty.easy': 'Easy',
+  'difficulty.normal': 'Normal',
+  'difficulty.hard': 'Hard',
+  'difficulty.insane': 'Insane',
+  'difficulty.expert': 'Expert',
+
   // ---------------------------------------------------------------- Shell (top bar / settings page)
   'nav.checklist': 'Checklist',
   'nav.settings': '设置',
@@ -415,6 +424,11 @@ export const zh = {
   'entry.sourceAria': '来源',
   'entry.scopeDetected': '已按讨论页位置识别为 {scope}',
   'entry.sourceDetected': '已按帖子作者识别为 {source}',
+  'entry.difficultyLabel': '难度（Easy / Normal / Hard / Insane / Expert）',
+  'entry.difficultyAria': '难度',
+  'entry.difficultyDetectedName': '已按谱面难度名识别为 {tier}',
+  'entry.difficultyDetectedStars': '已按星数 {stars} 识别为 {tier}',
+  'entry.difficultyClearTitle': '再点一次取消难度',
   'entry.summaryLabel': '概述（必填）',
   'entry.summaryPlaceholder': '这条 mod 提示检查谱面的什么？一句概括即可，细节放在链接和备注里。',
   'entry.linksLabel': '示例链接',
@@ -488,6 +502,7 @@ export const zh = {
   // ---------------------------------------------------------------- About panel
   'about.title': '关于',
   'about.author': '作者：{author}',
+  'about.version': '版本 {version}',
   'about.license': 'MIT License',
   'about.aiNote': '本扩展由 DeepSeek V4 的 vibe coding 生成。',
   'about.repo': 'GitHub 仓库',

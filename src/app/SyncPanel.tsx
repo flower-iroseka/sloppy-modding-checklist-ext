@@ -71,7 +71,7 @@ export function SyncPanel() {
   /**
    * The action currently running, e.g. `'test'` / `'push'` / `'connect:dropbox'`.
    *
-   * It's an identifier for the machine, not text -- the "测试中…" on the button comes from
+   * It's an identifier for the machine, not text -- the "Testing…" on the button comes from
    * `t('sync.testBusy')`, so it doesn't go into the catalog (putting it there would create a
    * mismatch like "a Chinese busy label in an English UI").
    */
@@ -131,9 +131,9 @@ export function SyncPanel() {
   }
 
   // When no sync method has been picked yet, show the first entry in the catalog (local sync
-  // folder) but without a selected state -- as soon as the user hits "保存 / 选择文件夹" it
-  // really becomes the active method. Being first is intentional: it's the only method that
-  // needs no app registration and works out of the box (§7.7).
+  // folder) but without a selected state -- as soon as the user hits "Save and test connection"
+  // / "Choose folder" it really becomes the active method. Being first is intentional: it's the
+  // only method that needs no app registration and works out of the box (§7.7).
   const active: ProviderId = settings.activeProvider ?? PROVIDER_CATALOG[0].id;
   const desc = catalogEntry(active);
   const isWebDav = active === 'webdav';
@@ -860,7 +860,7 @@ function WebDavForm({
       </div>
 
       {/* The three buttons in this form are those three actions (the button text is
-          "保存并测试连接"), so the result grows here too (see the notes on SyncResult). */}
+          "Save and test connection"), so the result grows here too (see the notes on SyncResult). */}
       <SyncResult error={error} notice={notice} />
     </>
   );
@@ -990,7 +990,7 @@ const FOLDER_PICKER_ID = 'mc-sync-folder';
 /**
  * Ask for the folder permission once, read-only. Ask but don't request --
  * `requestPermission` needs a user gesture and can only be triggered by a button; here we
- * just want to know whether to show "重新授权".
+ * just want to know whether to show "Re-authorize".
  *
  * @param set callback with the state; null when the handle can't be read (that counts as a state too)
  */

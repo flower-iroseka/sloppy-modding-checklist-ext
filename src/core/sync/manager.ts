@@ -289,7 +289,7 @@ export function adopt(remoteDoc: ChecklistDoc, localUpdatedAt: number): Checklis
 }
 
 /**
- * Total entry count. It only returns a number; the "N 条" measure word is copy, and
+ * Total entry count. It only returns a number; the "{count} in total" wording is copy, and
  * lives in the catalog.
  *
  * @param doc the doc to count

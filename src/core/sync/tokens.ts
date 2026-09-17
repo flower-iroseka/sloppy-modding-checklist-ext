@@ -35,7 +35,7 @@ function isTokenSet(raw: unknown): raw is TokenSet {
  * in the catalog get dropped (added when M7 cut Google Drive). Two reasons: a deleted
  * provider's refresh_token is a credential nobody will ever clear again, and keeping it
  * means no code can read it anyway, so it's pure dead weight; worse, if it's ever added back
- * we'd read out a ticket from years ago, show "已连接" straight away, and that ticket expired
+ * we'd read out a ticket from years ago, show "● Connected" straight away, and that ticket expired
  * long ago.
  *
  * @param raw the raw value read from storage
@@ -103,8 +103,8 @@ export async function clearToken(id: ProviderId): Promise<void> {
 
 /**
  * Whether this provider is connected. Returns only a boolean, never the token -- the
- * settings page uses it to render "已连接 / 未连接", so the "pages don't touch credentials"
- * constraint doesn't need an exception.
+ * settings page uses it to render "● Connected / ○ Not connected", so the "pages don't touch
+ * credentials" constraint doesn't need an exception.
  *
  * @param id which provider
  * @returns true when a non-empty token is stored
@@ -115,7 +115,7 @@ export async function hasToken(id: ProviderId): Promise<boolean> {
 }
 
 /**
- * Notify when tokens change (the settings page refreshes its "已连接" text from this). Again
+ * Notify when tokens change (the settings page refreshes its "● Connected" text from this). Again
  * only booleans.
  *
  * @param cb the ids of providers that currently have a token, received after a change

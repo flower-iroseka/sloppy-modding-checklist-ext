@@ -130,12 +130,12 @@ function startFakeDav() {
 
 const dav = await startFakeDav();
 const DAV_URL = `http://127.0.0.1:${dav.port}${DAV_PATH}`;
-console.log(`  假 WebDAV：${DAV_URL}`);
+console.log(`  fake WebDAV: ${DAV_URL}`);
 
 const list = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
 const target = list.find((t) => t.type === 'page');
 if (!target) {
-  console.error('没有可用的标签页');
+  console.error('no usable tab');
   process.exit(2);
 }
 const ws = new WebSocket(target.webSocketDebuggerUrl);
@@ -336,7 +336,7 @@ dav.state.calls.length = 0;
 await goto(APP);
 await send('Page.bringToFront').catch(() => {});
 const hidden = await warnIfHidden(evaluate);
-console.log(`  标签页可见：${hidden ? '否（将退化）' : '是'}`);
+console.log(`  tab visible: ${hidden ? 'no (will fall back)' : 'yes'}`);
 
 // --- Settings page UI (don't click the two buttons that request permission) -----------------------------
 await resetStorage();
@@ -371,12 +371,12 @@ for (let i = 0; i < 20 && panel === null; i++) {
     return { base: !!document.querySelector('#dav-base'), pass: document.querySelector('#dav-pass')?.type };
   })()`);
 }
-check('设置页渲染出同步面板', panel !== null, JSON.stringify(panel));
-check('密码框是 type=password（不明文显示）', panel?.pass === 'password');
+check('settings page renders the sync panel', panel !== null, JSON.stringify(panel));
+check('password field is type=password (not shown in plain text)', panel?.pass === 'password');
 check(
-  '未填完时按钮是禁用的（不让用户点了才报错）',
+  'the button is disabled while the form is incomplete (so the user does not have to click to get an error)',
   await evaluate(`(() => {
-    // Identify the WebDAV row by its "保存并测试连接" button -- selecting '.panel .btn' would
+    // Identify the WebDAV row by its "save and test connection" button -- selecting '.panel .btn' would
     // also sweep in the **shared** action buttons, and that row looks exactly the same under
     // other providers (see the comment above).
     const row = [...document.querySelectorAll('.panel .row')].find((r) =>
@@ -394,9 +394,9 @@ await sync('mc:get-user');
 await setSettings({});
 dav.state.calls.length = 0;
 const test1 = await sync(MSG.test);
-check('空仓库：测试连接通过', test1?.ok === true, test1?.text);
+check('empty repo: test connection passes', test1?.ok === true, test1?.text);
 check(
-  '测试连接走的是 PROPFIND 探集合',
+  'test connection probes the collection with PROPFIND',
   dav.state.calls.some((c) => c.method === 'PROPFIND' && c.path === DAV_PATH),
   dav.state.calls.map((c) => c.method).join(','),
 );
@@ -406,18 +406,18 @@ const T0 = Date.now();
 await seedDoc(T0, ['本地条目 A']);
 const putBefore = dav.state.puts.length;
 const push1 = await sync(MSG.push);
-check('首次上传成功', push1?.ok === true, push1?.text);
-check('远端文件已创建且内容正确', JSON.stringify(remoteSummaries()) === '["本地条目 A"]', JSON.stringify(remoteSummaries()));
-check('首次上传没有多余备份（远端本来就没有内容可覆盖）', (await backupKeys()).length === 0);
-check('确实发了一次 PUT', dav.state.puts.length === putBefore + 1);
+check('first upload succeeds', push1?.ok === true, push1?.text);
+check('remote file created with the right content', JSON.stringify(remoteSummaries()) === '["本地条目 A"]', JSON.stringify(remoteSummaries()));
+check('first upload makes no extra backup (there was nothing remote to overwrite)', (await backupKeys()).length === 0);
+check('exactly one PUT was sent', dav.state.puts.length === putBefore + 1);
 
 // --- Nothing changes, so neither side moves --------------------------------------------------
 const push2 = await sync(MSG.push);
-check('再上传：判定「已一致」而不是白传一遍', push2?.ok === true && /一致/.test(push2.text), push2?.text);
-check('没有产生第二次 PUT', dav.state.puts.length === putBefore + 1);
+check('upload again: judged "already in sync" instead of pushing for nothing', push2?.ok === true && /一致/.test(push2.text), push2?.text);
+check('no second PUT was made', dav.state.puts.length === putBefore + 1);
 
 const pull1 = await sync(MSG.pull);
-check('再拉取：同样判定「已一致」', pull1?.ok === true && /一致/.test(pull1.text), pull1?.text);
+check('pull again: also judged "already in sync"', pull1?.ok === true && /一致/.test(pull1.text), pull1?.text);
 
 // --- Remote update -> pull ----------------------------------------------------
 const T1 = T0 + 600_000;
@@ -436,11 +436,11 @@ dav.state.file = JSON.stringify({
   },
 });
 const pull2 = await sync(MSG.pull);
-check('远端更新 → 拉取成功', pull2?.ok === true, pull2?.text);
-check('本地内容已换成远端的', JSON.stringify(summariesOf(await readLocal())) === '["远端条目 B"]', JSON.stringify(summariesOf(await readLocal())));
-check('覆盖前的本地已备份', (await backupKeys()).some((k) => k.startsWith('checklist-backup-')), (await backupKeys()).join(','));
+check('remote updated → pull succeeds', pull2?.ok === true, pull2?.text);
+check("local content replaced with the remote's", JSON.stringify(summariesOf(await readLocal())) === '["远端条目 B"]', JSON.stringify(summariesOf(await readLocal())));
+check('the local copy was backed up before being overwritten', (await backupKeys()).some((k) => k.startsWith('checklist-backup-')), (await backupKeys()).join(','));
 const st2 = await readStatus();
-check('同步状态记录了 pull', st2?.lastAction === 'pull' && typeof st2?.lastSyncAt === 'number', JSON.stringify(st2));
+check('sync status records the pull', st2?.lastAction === 'pull' && typeof st2?.lastSyncAt === 'number', JSON.stringify(st2));
 
 // --- Upload conflict -----------------------------------------------------------
 const T2 = Date.now() + 1_200_000;
@@ -455,15 +455,15 @@ dav.state.file = JSON.stringify({
 });
 const before = dav.state.puts.length;
 const push3 = await sync(MSG.push);
-check('远端更新时上传 → 挂起等确认', push3?.ok === true && push3?.conflict?.kind === 'push', JSON.stringify(push3?.conflict));
-check('挂起期间远端一个字节都没被改', dav.state.puts.length === before && JSON.stringify(remoteSummaries()) === '["别人刚写的 C"]');
-check('冲突现场记进了 syncStatus', (await readStatus())?.pendingConflict?.kind === 'push');
+check('upload when the remote changed → held pending confirmation', push3?.ok === true && push3?.conflict?.kind === 'push', JSON.stringify(push3?.conflict));
+check('not a byte of the remote was changed while it was held', dav.state.puts.length === before && JSON.stringify(remoteSummaries()) === '["别人刚写的 C"]');
+check('the conflict state was recorded in syncStatus', (await readStatus())?.pendingConflict?.kind === 'push');
 
 // --- Forced upload ---------------------------------------------------------
 const push4 = await sync(MSG.push, { force: true });
-check('确认后上传成功', push4?.ok === true && !push4?.conflict, push4?.text);
-check('远端已被本地覆盖', JSON.stringify(remoteSummaries()) === '["远端条目 B"]', JSON.stringify(remoteSummaries()));
-check('被覆盖的远端已备份', (await backupKeys()).some((k) => k.startsWith('checklist-remote-backup-')), (await backupKeys()).join(','));
+check('upload succeeds after confirmation', push4?.ok === true && !push4?.conflict, push4?.text);
+check('the remote was overwritten by the local copy', JSON.stringify(remoteSummaries()) === '["远端条目 B"]', JSON.stringify(remoteSummaries()));
+check('the overwritten remote was backed up', (await backupKeys()).some((k) => k.startsWith('checklist-remote-backup-')), (await backupKeys()).join(','));
 
 // --- The "local wins" strategy doesn't ask any more ---------------------------------------------
 await setSettings({ strategy: 'local-wins' });
@@ -478,7 +478,7 @@ dav.state.file = JSON.stringify({
   },
 });
 const push5 = await sync(MSG.push);
-check('策略「本地优先」时远端更新也直接传', push5?.ok === true && !push5?.conflict, push5?.text);
+check('with the "local wins" strategy a remote update is still pushed straight through', push5?.ok === true && !push5?.conflict, push5?.text);
 
 // --- Pull conflict (timestamps tie + ask) ----------------------------------------
 await setSettings({ strategy: 'ask' });
@@ -494,60 +494,60 @@ dav.state.file = JSON.stringify({
   },
 });
 const pull3 = await sync(MSG.pull);
-check('时间戳打平 + 策略 ask → 挂起问用户', pull3?.ok === true && pull3?.conflict?.kind === 'pull', JSON.stringify(pull3?.conflict));
-check('挂起期间本地没被改', JSON.stringify(summariesOf(await readLocal())) === '["本地这份 E"]');
-check('冲突现场带着远端原文（用户不必再下一次）', typeof pull3?.conflict?.remoteJson === 'string' && /远端这份 F/.test(pull3.conflict.remoteJson));
+check('timestamps tie + strategy ask → held to ask the user', pull3?.ok === true && pull3?.conflict?.kind === 'pull', JSON.stringify(pull3?.conflict));
+check('the local copy was not changed while it was held', JSON.stringify(summariesOf(await readLocal())) === '["本地这份 E"]');
+check('the conflict carries the remote JSON (so the user does not have to fetch it again)', typeof pull3?.conflict?.remoteJson === 'string' && /远端这份 F/.test(pull3.conflict.remoteJson));
 
 const pull4 = await sync(MSG.pull, { force: true, remoteJsonOverride: pull3.conflict.remoteJson });
-check('「采用远端」成功', pull4?.ok === true && /采用远端/.test(pull4.text), pull4?.text);
-check('本地已换成远端内容', JSON.stringify(summariesOf(await readLocal())) === '["远端这份 F"]');
+check('"use the remote version" succeeds', pull4?.ok === true && /采用远端/.test(pull4.text), pull4?.text);
+check("local content replaced with the remote's", JSON.stringify(summariesOf(await readLocal())) === '["远端这份 F"]');
 
 // --- Remote file is corrupt -> upload can still overwrite it -------------------------------------
 dav.state.file = '{ 这不是 JSON';
 const push6 = await sync(MSG.push);
-check('远端文件坏掉时上传不被拦', push6?.ok === true, push6?.text);
-check('坏文件被新内容覆盖', JSON.stringify(remoteSummaries()) === '["远端这份 F"]');
+check('a corrupt remote file does not block the upload', push6?.ok === true, push6?.text);
+check('the corrupt file is overwritten with the new content', JSON.stringify(remoteSummaries()) === '["远端这份 F"]');
 
 // --- Error paths: error messages should be readable (not serialized into {}) --------------------
 await setSettings({ config: { webdav: { password: 'wrong' } } });
 const badAuth = await sync(MSG.test);
-check('密码错 → ok:false 且说明是认证问题', badAuth?.ok === false && /认证/.test(badAuth.text), badAuth?.text);
-check('失败信息不是空对象（异常没被结构化克隆吞掉）', typeof badAuth?.text === 'string' && badAuth.text.length > 4);
+check('wrong password → ok:false and it says the problem is authentication', badAuth?.ok === false && /认证/.test(badAuth.text), badAuth?.text);
+check('the failure message is not an empty object (the exception was not swallowed by structured clone)', typeof badAuth?.text === 'string' && badAuth.text.length > 4);
 
 await setSettings({ config: { webdav: { password: PASS, baseUrl: `http://127.0.0.1:${dav.port}/nope` } } });
 const badPath = await sync(MSG.test);
-check('路径不存在 → 指向「服务器地址与子目录」', badPath?.ok === false && /路径/.test(badPath.text), badPath?.text);
+check('path does not exist → points at "server address and subdirectory"', badPath?.ok === false && /路径/.test(badPath.text), badPath?.text);
 
 const st9 = await readStatus();
 check(
-  '失败也记进了 syncStatus.lastError（且能翻成人话）',
+  'the failure is recorded in syncStatus.lastError too (and can be turned into a readable sentence)',
   (await render(st9?.lastError)).length > 0,
   await render(st9?.lastError),
 );
-check('失败不会顺手抹掉「上次同步时间」', typeof st9?.lastSyncAt === 'number', String(st9?.lastSyncAt));
-check('失败不会抹掉上次动作', st9?.lastAction === 'push', String(st9?.lastAction));
+check('a failure does not wipe the last sync time as a side effect', typeof st9?.lastSyncAt === 'number', String(st9?.lastSyncAt));
+check('a failure does not wipe the last action', st9?.lastAction === 'push', String(st9?.lastAction));
 
 // --- Alarms: only set when they should be ----------------------------------------------
 await setSettings({ config: { webdav: { baseUrl: DAV_URL } }, autoSync: false });
 await sleep(250);
-check('未开自动同步 → 没有定时闹钟', (await alarms()).every((a) => a.name !== 'mc-sync-periodic'), JSON.stringify(await alarms()));
+check('auto sync off → no periodic alarm', (await alarms()).every((a) => a.name !== 'mc-sync-periodic'), JSON.stringify(await alarms()));
 
 await setSettings({ autoSync: true });
 await sleep(400);
 const arm = (await alarms()).find((a) => a.name === 'mc-sync-periodic');
-check('开了自动同步 → 挂上 60 分钟的闹钟', arm?.period === 60, JSON.stringify(await alarms()));
+check('auto sync on → a 60-minute alarm is armed', arm?.period === 60, JSON.stringify(await alarms()));
 
 await setSettings({ autoSync: false });
 await sleep(400);
-check('关掉自动同步 → 闹钟摘掉', (await alarms()).every((a) => a.name !== 'mc-sync-periodic'), JSON.stringify(await alarms()));
+check('auto sync off → the alarm is cleared', (await alarms()).every((a) => a.name !== 'mc-sync-periodic'), JSON.stringify(await alarms()));
 
 // ---------------------------------------------------------------- Wrap up
 
 console.log('');
 if (failures.length === 0) {
-  console.log(`全部通过（${dav.state.calls.length} 次请求）`);
+  console.log(`all passed (${dav.state.calls.length} requests)`);
 } else {
-  console.log(`${failures.length} 项失败：`);
+  console.log(`${failures.length} checks failed:`);
   for (const f of failures) console.log(`  - ${f}`);
 }
 ws.close();

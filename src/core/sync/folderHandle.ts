@@ -138,7 +138,7 @@ export async function loadFolderHandle(): Promise<DirHandleLike | null> {
     : null;
 }
 
-/** Delete the stored handle (used when the user clicks "断开"). */
+/** Delete the stored handle (used when the user clicks "Disconnect"). */
 export async function clearFolderHandle(): Promise<void> {
   await tx('readwrite', (s) => s.delete(HANDLE_KEY));
 }
@@ -151,7 +151,7 @@ export async function clearFolderHandle(): Promise<void> {
  * When `queryPermission` isn't available, optimistically treat it as granted: the API
  * really can be missing in edge cases (old browsers, fake handles in tests), but when it
  * genuinely can't be used, `createWritable` throws a `NotAllowedError`, and the message on
- * that path also points at "重新授权". Blocking pessimistically here would make a
+ * that path also points at "Re-authorize". Blocking pessimistically here would make a
  * perfectly usable environment unusable.
  *
  * @param handle directory handle
@@ -186,7 +186,7 @@ export async function requestFolderPermission(handle: DirHandleLike): Promise<Fo
     return state === 'granted' || state === 'denied' ? state : 'prompt';
   } catch {
     // Not inside a user gesture / the user declined -- both fall back to prompt, so the UI
-    // keeps showing "重新授权".
+    // keeps showing "Re-authorize".
     return 'prompt';
   }
 }

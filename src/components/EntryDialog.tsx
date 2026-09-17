@@ -1,8 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SCOPE_LABEL_KEY, SCOPES, SOURCE_LABEL_KEY, SOURCES } from '../core/cells';
 import { findDuplicate } from '../core/dedupe';
+import {
+  DIFFICULTIES,
+  DIFFICULTY_LABEL_KEY,
+  type DetectedDifficulty,
+} from '../core/difficulty';
 import { parseAuthorLink, resolveLinkAuthor } from '../core/osuAuthor';
-import type { EntryMeta, NewEntryInput, Scope, Source, SourceAuthor } from '../core/types';
+import type {
+  Difficulty,
+  EntryMeta,
+  NewEntryInput,
+  Scope,
+  Source,
+  SourceAuthor,
+} from '../core/types';
 import { useLocale } from '../i18n/react';
 import { useChecklist } from '../shared/useChecklist';
 import { Modal } from './Modal';
@@ -25,6 +37,8 @@ export interface EntryDialogDefaults {
   scope: Scope;
   /** Which zone it goes in. */
   source: Source;
+  /** Existing difficulty tier; undefined when creating or when the entry has none. */
+  difficulty?: Difficulty;
   /** Existing summary text; undefined (and then shown empty) when creating. */
   summary?: string;
   /** Existing links; empty when creating. */
@@ -51,10 +65,21 @@ export interface EntryDialogProps {
   defaults: EntryDialogDefaults;
   /** Excludes itself when editing, so it doesn't flag itself as a duplicate */
   editingId?: string;
-  /** The source auto-detected from the author; shows "已按作者识别" when it equals the current selection */
+  /**
+   * The source auto-detected from the author; shows "Detected {source} from the post author"
+   * when it equals the current selection
+   */
   recommendedSource?: Source;
-  /** The scope auto-detected from the discussion-page position; shows "已按位置识别" when it equals the current selection */
+  /**
+   * The scope auto-detected from the discussion-page position; shows "Detected {scope} from
+   * the position in the discussion" when it equals the current selection
+   */
   recommendedScope?: Scope;
+  /**
+   * Tier auto-detected from the open beatmap; shows "Detected …" and pre-fills the field.
+   * Only the content script can produce one -- the Checklist page has no beatmap open.
+   */
+  detectedDifficulty?: DetectedDifficulty;
   /** Submit: hand off the filled-in content. */
   onSubmit(input: NewEntryInput): void;
   /** Cancel or close the dialog. */
@@ -63,7 +88,7 @@ export interface EntryDialogProps {
 
 /**
  * Create / edit dialog (CODING_PLAN §1.2, §5.3).
- * The app page's "＋" and the content script's "＋ 添加到 Checklist" share the same component
+ * The app page's "+" and the content script's "+ Add to Checklist" share the same component
  * and the same set of fields.
  */
 export function EntryDialog({
@@ -73,6 +98,7 @@ export function EntryDialog({
   editingId,
   recommendedSource,
   recommendedScope,
+  detectedDifficulty,
   onSubmit,
   onCancel,
 }: EntryDialogProps) {
@@ -89,6 +115,7 @@ export function EntryDialog({
   );
   const [linkProbes, setLinkProbes] = useState<Record<string, LinkProbe>>({});
   const [note, setNote] = useState(defaults.note ?? '');
+  const [difficulty, setDifficulty] = useState<Difficulty | undefined>(defaults.difficulty);
 
   // Reset from the current defaults each time it opens (the same instance gets reused over
   // and over). Only on the false->true edge of open: if defaults went into the dependencies it
@@ -96,6 +123,9 @@ export function EntryDialog({
   // user is typing.
   const defaultsRef = useRef(defaults);
   defaultsRef.current = defaults;
+  // Same reason as defaultsRef: the detection must be read once, on the open edge.
+  const detectedRef = useRef(detectedDifficulty);
+  detectedRef.current = detectedDifficulty;
   const wasOpen = useRef(false);
   useEffect(() => {
     if (open && !wasOpen.current) {
@@ -107,6 +137,11 @@ export function EntryDialog({
       setLinkAuthors(d.linkAuthors ?? {});
       setLinkProbes({});
       setNote(d.note ?? '');
+      // Pre-fill only for Individual entries: the field is only shown there, and detection
+      // doesn't re-run when the scope is switched by hand afterwards.
+      setDifficulty(
+        d.difficulty ?? (d.scope === 'individual' ? detectedRef.current?.tier : undefined),
+      );
     }
     wasOpen.current = open;
   }, [open]);
@@ -131,7 +166,7 @@ export function EntryDialog({
    * Only links that can be pinned to a specific post are requested (the test is
    * `parseAuthorLink`): external docs, imgur, user profiles, discussion pages without a
    * number and the like can't be resolved anyway, so we don't even ask -- silence is less
-   * intrusive than popping up a "解析失败". Results are keyed by URL, so changing the link
+   * intrusive than popping up a "parse failed". Results are keyed by URL, so changing the link
    * address makes the old author disappear naturally instead of getting attached to the
    * wrong thing.
    *
@@ -169,10 +204,22 @@ export function EntryDialog({
       links: cleanLinks,
       linkAuthors: keptAuthors,
       ...(note.trim() ? { note: note.trim() } : {}),
+      ...(difficulty ? { difficulty } : {}),
       ...(defaults.sourceAuthor ? { sourceAuthor: defaults.sourceAuthor } : {}),
       ...(defaults.meta ? { meta: defaults.meta } : {}),
     });
-  }, [canSubmit, onSubmit, scope, source, summary, cleanLinks, linkAuthors, note, defaults]);
+  }, [
+    canSubmit,
+    onSubmit,
+    scope,
+    source,
+    summary,
+    cleanLinks,
+    linkAuthors,
+    note,
+    difficulty,
+    defaults,
+  ]);
 
   const patchLink = (index: number, value: string) =>
     setLinks((prev) => prev.map((l, i) => (i === index ? value : l)));
@@ -257,6 +304,43 @@ export function EntryDialog({
           </span>
         ) : null}
       </div>
+
+      {/* Only Individual entries carry a tier. The value is kept while the picker is hidden,
+          so dragging an entry over to General doesn't throw away what was set here. */}
+      {scope === 'individual' ? (
+        <div className="mc-field">
+          <span className="mc-field__label">{t('entry.difficultyLabel')}</span>
+          <div className="mc-seg" role="group" aria-label={t('entry.difficultyAria')}>
+            {DIFFICULTIES.map((d) => (
+              <button
+                key={d}
+                type="button"
+                // `--diff` rather than the plain `--on` fill: the selected tier is painted in
+                // its own colour, the same one the marker on a card carries (see ui.css).
+                className={`mc-seg__opt mc-seg__opt--diff${difficulty === d ? ' mc-seg__opt--on' : ''}`}
+                data-difficulty={d}
+                aria-pressed={difficulty === d}
+                title={difficulty === d ? t('entry.difficultyClearTitle') : undefined}
+                onClick={() => setDifficulty(difficulty === d ? undefined : d)}
+              >
+                {t(DIFFICULTY_LABEL_KEY[d])}
+              </button>
+            ))}
+          </div>
+          {detectedDifficulty && difficulty === detectedDifficulty.tier ? (
+            <span className="mc-rec">
+              {detectedDifficulty.via === 'name'
+                ? t('entry.difficultyDetectedName', {
+                    tier: t(DIFFICULTY_LABEL_KEY[detectedDifficulty.tier]),
+                  })
+                : t('entry.difficultyDetectedStars', {
+                    tier: t(DIFFICULTY_LABEL_KEY[detectedDifficulty.tier]),
+                    stars: (detectedDifficulty.stars ?? 0).toFixed(2),
+                  })}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="mc-field">
         <label className="mc-field__label" htmlFor="mc-summary">

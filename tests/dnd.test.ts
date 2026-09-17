@@ -70,21 +70,21 @@ function drag(fromId: string, overId: string): void {
   checklistStore.getState().moveEntry(fromId, drop.cell, drop.index);
 }
 
-describe('拖拽落点解析（纯函数）', () => {
+describe('drop target resolution (pure functions)', () => {
   const cells = docWith({ 'general-internal': ['a', 'b', 'c'], 'general-external': ['x'] }).cells;
 
-  it('落在格子的 dropzone → 追加到该格末尾', () => {
+  it('dropping on a cell dropzone -> appends to the end of that cell', () => {
     expect(resolveDrop(cells, zoneDroppableId('individual-external'))).toEqual({
       cell: 'individual-external',
     });
   });
 
-  it('落在某条卡片上 → 该卡片所在格与下标', () => {
+  it('dropping on a card -> that card cell and index', () => {
     expect(resolveDrop(cells, 'b')).toEqual({ cell: 'general-internal', index: 1 });
     expect(resolveDrop(cells, 'x')).toEqual({ cell: 'general-external', index: 0 });
   });
 
-  it('落在自己身上 / 解析不出的目标 → null', () => {
+  it('dropping on itself / an unresolvable target -> null', () => {
     expect(resolveDrop(cells, 'a', 'a')).toBeNull();
     expect(resolveDrop(cells, null)).toBeNull();
     expect(resolveDrop(cells, 'zone:nope')).toBeNull();
@@ -92,40 +92,40 @@ describe('拖拽落点解析（纯函数）', () => {
   });
 });
 
-describe('拖拽后的落库顺序（resolveDrop + moveEntry 端到端）', () => {
+describe('store order after a drop (resolveDrop + moveEntry end to end)', () => {
   beforeEach(() => {
     resetStore();
     checklistStore.getState().replaceDoc(docWith({ 'general-internal': ['a', 'b', 'c'], 'general-external': ['x', 'y'] }));
   });
 
-  it('同格内往下拖（a 落到 c 上）', () => {
+  it('drag down within the same cell (a onto c)', () => {
     drag('a', 'c');
     expect(order()['general-internal']).toEqual(['b', 'c', 'a']);
   });
 
-  it('同格内往上拖（c 落到 a 上）', () => {
+  it('drag up within the same cell (c onto a)', () => {
     drag('c', 'a');
     expect(order()['general-internal']).toEqual(['c', 'a', 'b']);
   });
 
-  it('同格内相邻（a 落到 b 上 = 交换）', () => {
+  it('adjacent within the same cell (a onto b = swap)', () => {
     drag('a', 'b');
     expect(order()['general-internal']).toEqual(['b', 'a', 'c']);
   });
 
-  it('跨格落到指定条目前（b → x 之前）', () => {
+  it('cross-cell drop before a given entry (b -> before x)', () => {
     drag('b', 'x');
     expect(order()['general-internal']).toEqual(['a', 'c']);
     expect(order()['general-external']).toEqual(['b', 'x', 'y']);
   });
 
-  it('跨格落到目标格空白处 = 追加到末尾（a → general-external 区）', () => {
+  it('cross-cell drop on empty space in the target = append to the end (a -> general-external zone)', () => {
     drag('a', zoneDroppableId('general-external'));
     expect(order()['general-internal']).toEqual(['b', 'c']);
     expect(order()['general-external']).toEqual(['x', 'y', 'a']);
   });
 
-  it('跨格落点会同时改写条目的 scope/source（拖拽 = 改分类）', () => {
+  it('a cross-cell drop also rewrites the entry scope/source (dragging = reclassifying)', () => {
     drag('b', zoneDroppableId('individual-external'));
     const moved = checklistStore.getState().doc.cells['individual-external'][0]!;
     expect(moved.id).toBe('b');
@@ -133,40 +133,40 @@ describe('拖拽后的落库顺序（resolveDrop + moveEntry 端到端）', () =
     expect(moved.source).toBe('external');
   });
 
-  it('拖回原位不改变顺序', () => {
+  it('dropping back in place does not change the order', () => {
     drag('b', 'b');
     expect(order()['general-internal']).toEqual(['a', 'b', 'c']);
   });
 
-  it('拖到本格末尾且本来就在末尾 → 不动', () => {
+  it('drop at the end of its own cell when already last -> no change', () => {
     drag('c', zoneDroppableId('general-internal'));
     expect(order()['general-internal']).toEqual(['a', 'b', 'c']);
   });
 });
 
-describe('no-op 判定', () => {
+describe('no-op detection', () => {
   const cells = docWith({ 'general-internal': ['a', 'b', 'c'] }).cells;
 
   const ownZone = zoneDroppableId('general-internal');
 
-  it('落在自己身上算 no-op', () => {
+  it('dropping on itself counts as a no-op', () => {
     expect(resolveDrop(cells, 'c', 'c')).toBeNull();
     expect(isNoopDrop(cells, 'c', resolveDrop(cells, 'c', 'c'))).toBe(true);
   });
 
-  it('拖到本格末尾且本来就在末尾 → no-op', () => {
+  it('drop at the end of its own cell when already last -> no-op', () => {
     expect(isNoopDrop(cells, 'c', resolveDrop(cells, ownZone, 'c'))).toBe(true);
   });
 
-  it('拖到本格末尾但不在末尾 → 不是 no-op', () => {
+  it('drop at the end of its own cell but not already last -> not a no-op', () => {
     expect(isNoopDrop(cells, 'a', resolveDrop(cells, ownZone, 'a'))).toBe(false);
   });
 
-  it('跨格永远是有效移动', () => {
+  it('a cross-cell drop is always a real move', () => {
     expect(isNoopDrop(cells, 'a', { cell: 'individual-external' })).toBe(false);
   });
 
-  it('无法解析的落点算 no-op（放弃移动）', () => {
+  it('an unresolvable drop target counts as a no-op (the move is dropped)', () => {
     expect(isNoopDrop(cells, 'a', null)).toBe(true);
   });
 });

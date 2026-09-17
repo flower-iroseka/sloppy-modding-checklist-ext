@@ -20,22 +20,22 @@ import { resetStore } from './helpers';
  */
 
 describe('normalizeWebDavConfig', () => {
-  it('baseUrl 去尾部斜杠（拼文件名时统一加，不能存两遍）', () => {
+  it('baseUrl loses its trailing slash (added once when building the file name, never stored twice)', () => {
     expect(normalizeWebDavConfig({ baseUrl: 'https://dav.example.com/dav///' }).baseUrl).toBe(
       'https://dav.example.com/dav',
     );
   });
 
-  it('path 去两端斜杠', () => {
+  it('path loses the slashes at both ends', () => {
     expect(normalizeWebDavConfig({ path: '/osu/' }).path).toBe('osu');
     expect(normalizeWebDavConfig({ path: '   ' }).path).toBe('');
   });
 
-  it('密码里的空白必须原样保留（trim 掉就登不上了）', () => {
+  it('whitespace in the password must be kept as-is (trimming it would break the login)', () => {
     expect(normalizeWebDavConfig({ password: ' ab cd ' }).password).toBe(' ab cd ');
   });
 
-  it('用户名去两端空白，字段缺失时为空串而不是 undefined', () => {
+  it('username is trimmed, and a missing field is an empty string rather than undefined', () => {
     const cfg = normalizeWebDavConfig({ username: '  me  ' });
     expect(cfg.username).toBe('me');
     expect(cfg.password).toBe('');
@@ -43,7 +43,7 @@ describe('normalizeWebDavConfig', () => {
     expect(cfg.enabled).toBe(false);
   });
 
-  it('喂垃圾不抛错', () => {
+  it('garbage input does not throw', () => {
     expect(normalizeWebDavConfig(null).baseUrl).toBe('');
     expect(normalizeWebDavConfig('nope').username).toBe('');
     expect(normalizeWebDavConfig(42).password).toBe('');
@@ -54,14 +54,14 @@ describe('normalizeLocalFolderConfig', () => {
   // The handle lives in IndexedDB and the config only holds the name -- so there's very
   // little to normalize here, and the trimmed name is exactly what matters: it's the only
   // basis for telling whether a folder was ever picked.
-  it('只留一个显示用的名字，两端空白去掉', () => {
+  it('keeps just a display name, trimmed', () => {
     expect(normalizeLocalFolderConfig({ enabled: true, folderName: '  My Drive  ' })).toEqual({
       enabled: true,
       folderName: 'My Drive',
     });
   });
 
-  it('名字是空白 / 缺失时整个字段不出现（而不是留一个空串）', () => {
+  it('a blank / missing name means the whole field is absent (not an empty string)', () => {
     expect(normalizeLocalFolderConfig({ enabled: true, folderName: '   ' })).toEqual({
       enabled: true,
     });
@@ -71,12 +71,12 @@ describe('normalizeLocalFolderConfig', () => {
   // Regression guard: after the value is written to storage, `normalizeSyncSettings` runs
   // it through again, and an empty string left in there would make the UI show a "has a
   // name" state.
-  it('喂垃圾不抛错', () => {
+  it('garbage input does not throw', () => {
     expect(normalizeLocalFolderConfig(null).folderName).toBeUndefined();
     expect(normalizeLocalFolderConfig(42).enabled).toBe(false);
   });
 
-  it('它和别家的配置互不干扰（切 provider 不会把文件夹名字抹掉）', () => {
+  it('it does not interfere with other providers configs (switching provider does not wipe the folder name)', () => {
     const s = normalizeSyncSettings({
       activeProvider: 'webdav',
       config: {
@@ -90,22 +90,22 @@ describe('normalizeLocalFolderConfig', () => {
 });
 
 describe('normalizeSyncSettings', () => {
-  it('非对象 → 默认值', () => {
+  it('non-object -> defaults', () => {
     expect(normalizeSyncSettings(null)).toEqual(defaultSyncSettings());
     expect(normalizeSyncSettings('x')).toEqual(defaultSyncSettings());
   });
 
-  it('未知的 provider 名字被丢掉', () => {
+  it('an unknown provider name is dropped', () => {
     expect(normalizeSyncSettings({ activeProvider: 'ftp' }).activeProvider).toBeNull();
   });
 
-  it('未知的策略名退回 newest-wins', () => {
+  it('an unknown strategy name falls back to newest-wins', () => {
     expect(normalizeSyncSettings({ strategy: 'mine-wins' }).strategy).toBe('newest-wins');
   });
 
   // Deliberate: wiping another provider's filled-in clientId / password just because the
   // user switched providers once would drive them crazy.
-  it('非活动 provider 的配置也要保留', () => {
+  it('a non-active provider config is kept too', () => {
     const s = normalizeSyncSettings({
       activeProvider: 'webdav',
       config: {
@@ -121,7 +121,7 @@ describe('normalizeSyncSettings', () => {
   // and `activeProvider: 'googleDrive'` -- on read, the former is dropped and the latter
   // falls back to null (the page then lands on the first item in the catalog). It must not
   // throw: not being able to open the settings page after one upgrade is the worst outcome.
-  it('已删除的 provider 的配置被丢掉，activeProvider 退回 null', () => {
+  it('a removed provider config is dropped, activeProvider falls back to null', () => {
     const s = normalizeSyncSettings({
       activeProvider: 'googleDrive',
       config: { googleDrive: { enabled: true, clientId: 'cid-123' } },
@@ -130,12 +130,12 @@ describe('normalizeSyncSettings', () => {
     expect(s.config).toEqual({});
   });
 
-  it('没有配过的 provider 不在 config 里留空壳', () => {
+  it('a provider never configured leaves no empty shell in config', () => {
     const s = normalizeSyncSettings({ config: { webdav: { baseUrl: 'https://a.com' } } });
     expect(Object.keys(s.config)).toEqual(['webdav']);
   });
 
-  it('布尔字段只认真正的 true', () => {
+  it('boolean fields only accept a real true', () => {
     const s = normalizeSyncSettings({ autoSync: 'yes', pullOnStart: 1 });
     expect(s.autoSync).toBe(false);
     expect(s.pullOnStart).toBe(false);
@@ -143,13 +143,13 @@ describe('normalizeSyncSettings', () => {
 });
 
 describe('normalizeSyncStatus', () => {
-  it('垃圾值 → 空状态（不是抛错）', () => {
+  it('garbage values -> empty status (not a throw)', () => {
     expect(normalizeSyncStatus(null)).toEqual({});
     expect(normalizeSyncStatus({ lastError: '' })).toEqual({});
     expect(normalizeSyncStatus({ lastAction: 'merge' })).toEqual({});
   });
 
-  it('保留合法字段', () => {
+  it('keeps the valid fields', () => {
     const normalized = normalizeSyncStatus({
       lastSyncAt: 123,
       lastAction: 'pull',
@@ -164,14 +164,14 @@ describe('normalizeSyncStatus', () => {
     expect(renderMsg(normalized.lastError!, 'zh')).toBe('boom');
   });
 
-  it('pendingConflict 缺 remoteJson 或 kind 不对时整个丢掉', () => {
+  it('pendingConflict is dropped entirely when remoteJson is missing or kind is wrong', () => {
     expect(normalizeSyncStatus({ pendingConflict: { kind: 'push' } }).pendingConflict).toBeUndefined();
     expect(
       normalizeSyncStatus({ pendingConflict: { kind: 'merge', remoteJson: '{}' } }).pendingConflict,
     ).toBeUndefined();
   });
 
-  it('pendingConflict 的时间戳缺失时补 0（不是 undefined）', () => {
+  it('a missing pendingConflict timestamp is filled with 0 (not undefined)', () => {
     const st = normalizeSyncStatus({ pendingConflict: { kind: 'pull', remoteJson: '{}' } });
     expect(st.pendingConflict).toEqual({
       kind: 'pull',
@@ -182,16 +182,16 @@ describe('normalizeSyncStatus', () => {
   });
 });
 
-describe('syncSettings 读写', () => {
+describe('syncSettings read / write', () => {
   beforeEach(() => {
     resetStore();
   });
 
-  it('没写过时读到默认值', async () => {
+  it('reads defaults when nothing was ever written', async () => {
     expect(await readSyncSettings()).toEqual(defaultSyncSettings());
   });
 
-  it('写进去再读回来是同一份（含规整）', async () => {
+  it('writing then reading back gives the same thing (normalization included)', async () => {
     await writeSyncSettings({
       ...defaultSyncSettings(),
       activeProvider: 'webdav',

@@ -45,7 +45,10 @@ export interface ChecklistActions {
   updateEntry(
     id: string,
     patch: Partial<
-      Pick<ChecklistEntry, 'summary' | 'links' | 'linkAuthors' | 'note' | 'scope' | 'source'>
+      Pick<
+        ChecklistEntry,
+        'summary' | 'links' | 'linkAuthors' | 'note' | 'scope' | 'source' | 'difficulty'
+      >
     >,
   ): void;
   /** @param id the id of the entry to delete */
@@ -108,6 +111,7 @@ export const checklistStore = createStore<ChecklistStore>()((set, get) => ({
       source: input.source,
       summary: input.summary,
       links: input.links ?? [],
+      ...(input.difficulty ? { difficulty: input.difficulty } : {}),
       ...(input.linkAuthors && Object.keys(input.linkAuthors).length > 0
         ? { linkAuthors: input.linkAuthors }
         : {}),

@@ -121,9 +121,9 @@ export function planPull(local: SyncSide, remote: SyncSide | null, strategy: Syn
 /**
  * What a push should do.
  *
- * When the user clicks "立即上传" they mean "make the remote look like my copy", so it just
+ * When the user clicks "Upload now" they mean "make the remote look like my copy", so it just
  * does that by default -- the only exception is when the remote is definitely newer (later
- * timestamp) and the strategy isn't "本地优先": that would really overwrite someone else's
+ * timestamp) and the strategy isn't "Local wins": that would really overwrite someone else's
  * changes, so ask first. This question doesn't block auto-sync, because automatic upload
  * goes through the `autoSync` path, and there `newest-wins` also returns `ask` in that
  * case; manager puts the conflict into status without blocking other actions.

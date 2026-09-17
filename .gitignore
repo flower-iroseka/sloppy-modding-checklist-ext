@@ -12,6 +12,9 @@ chrome/
 # 临时文件
 .tmp-*
 
+# 上传到扩展商店的打包产物
+*.zip
+
 # 系统杂项
 .DS_Store
 Thumbs.db

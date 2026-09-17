@@ -1,3 +1,5 @@
+import { beatmapsFromJsonText, pickBeatmap, type BeatmapInfo } from '../core/beatmap';
+import { detectDifficulty, type DetectedDifficulty } from '../core/difficulty';
 import type { EntryMeta, Scope, Source, SourceAuthor } from '../core/types';
 import {
   SELECTORS,
@@ -107,6 +109,22 @@ export interface PostTarget {
   recommendedScope: Scope;
   /** The body as plain text (prefilled as the summary, keeping as much of the content as possible) */
   text: string;
+  /** Tier auto-detected from the open beatmap; absent when nothing could be pinned down. */
+  difficulty?: DetectedDifficulty;
+}
+
+/**
+ * Read the beatmapset JSON the page embeds.
+ *
+ * Every failure path returns an empty array instead of throwing: a missing tag or malformed
+ * JSON must not reach `onAddClicked`'s catch, which would report "the site layout may have
+ * changed" for a post that was read perfectly well.
+ *
+ * @param root where to look; the document by default
+ * @returns the beatmapset's difficulties; an empty array when they can't be read
+ */
+export function readPageBeatmaps(root: ParentNode = document): BeatmapInfo[] {
+  return beatmapsFromJsonText(safeQuery(root, SELECTORS.beatmapsetJson)?.textContent ?? undefined);
 }
 
 /**
@@ -179,10 +197,22 @@ export function readPostTarget(
     ...(mode ? { mode } : {}),
   };
 
+  // Which difficulty this post is about. The beatmapId in the permalink pins it down; on a
+  // generalAll page there is none, so it only works when the set has a single difficulty.
+  const beatmap = pickBeatmap(readPageBeatmaps(), beatmapId);
+  const difficulty = detectDifficulty({
+    version: beatmap?.version,
+    stars: beatmap?.stars,
+    // The beatmap's own mode is authoritative; data-mode is the fallback, and it's missing
+    // on pages whose game-mode link hasn't rendered yet.
+    mode: beatmap?.mode ?? mode,
+  });
+
   return {
     permalink,
     ...(author ? { author } : {}),
     meta,
+    ...(difficulty ? { difficulty } : {}),
     recommendedSource: recommendSource(author?.id, currentUserId),
     recommendedScope: recommendScope(category),
     text: readPostText(post),

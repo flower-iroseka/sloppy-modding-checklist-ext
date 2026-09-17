@@ -75,7 +75,7 @@ async function main() {
   }
 
   // ---- 1) First load + CRUD + write to disk ----
-  check('页面就绪（debug API + hydrated）', await openAndWaitReady());
+  check('page ready (debug API + hydrated)', await openAndWaitReady());
 
   const seeded = await evaluate(`(async () => {
     const mc = window.__mc;
@@ -90,7 +90,7 @@ async function main() {
   })()`);
 
   check(
-    'CRUD 落到正确格子',
+    'CRUD lands in the right cells',
     seeded.counts['general-internal'] === 1 &&
       seeded.counts['general-external'] === 1 &&
       seeded.counts['individual-internal'] === 1 &&
@@ -105,7 +105,7 @@ async function main() {
     if (!doc) return null;
     return { counts: Object.fromEntries(Object.entries(doc.cells).map(([k, v]) => [k, v.length])), deviceId: doc.deviceId };
   })()`);
-  check('chrome.storage.local 真写入', !!stored, stored ? `deviceId=${stored.deviceId}` : 'no doc');
+  check('real write to chrome.storage.local', !!stored, stored ? `deviceId=${stored.deviceId}` : 'no doc');
 
   // ---- 2b) Does the UI follow the store (cell counts + read-only list) ----
   const ui = await evaluate(`(() => {
@@ -114,9 +114,9 @@ async function main() {
     const rows = [...document.querySelectorAll('li.card[data-entry-id]')].map((e) => e.textContent);
     return { zoneCount: zones.length, counts, rowCount: rows.length };
   })()`);
-  check('4 个格子都渲染', ui.zoneCount === 4, JSON.stringify(ui.counts));
-  check('格子计数跟随 store', ui.counts.filter((c) => c === '1').length === 3 && ui.counts.filter((c) => c === '0').length === 1, JSON.stringify(ui.counts));
-  check('只读列表渲染 3 条', ui.rowCount === 3, `rows=${ui.rowCount}`);
+  check('all 4 zones render', ui.zoneCount === 4, JSON.stringify(ui.counts));
+  check('zone counts follow the store', ui.counts.filter((c) => c === '1').length === 3 && ui.counts.filter((c) => c === '0').length === 1, JSON.stringify(ui.counts));
+  check('read-only list renders 3 rows', ui.rowCount === 3, `rows=${ui.rowCount}`);
 
   // ---- 3) Reload the page -> rehydrate -> data is still there ----
   const ready2 = await openAndWaitReady();
@@ -128,14 +128,14 @@ async function main() {
       summaries: Object.values(d.cells).flat().map((e) => e.summary).sort(),
     };
   })()`);
-  check('刷新后仍 hydrated', ready2);
+  check('still hydrated after reload', ready2);
   check(
-    '刷新后条目仍在（跨刷新持久化）',
+    'entries survive the reload (persisted across reloads)',
     JSON.stringify(afterReload.counts) === JSON.stringify(seeded.counts) &&
       JSON.stringify(afterReload.summaries) === JSON.stringify(['M1 e2e A', 'M1 e2e B', 'M1 e2e C']),
     JSON.stringify(afterReload.counts),
   );
-  check('deviceId 跨刷新稳定', afterReload.deviceId === seeded.deviceId, afterReload.deviceId);
+  check('deviceId is stable across reloads', afterReload.deviceId === seeded.deviceId, afterReload.deviceId);
 
   // ---- 4) Export -> clear -> import (round-trip) ----
   const roundTrip = await evaluate(`(async () => {
@@ -151,9 +151,9 @@ async function main() {
     const d = mc.doc();
     return { equal: text1 === text2, emptied, dropped, total: Object.values(d.cells).flat().length, bytes: text1.length };
   })()`);
-  check('清空后为空', roundTrip.emptied === 0);
-  check('导入后条目数恢复', roundTrip.total === 3, `total=${roundTrip.total}`);
-  check('导出↔导入 文本往返一致', roundTrip.equal, `bytes=${roundTrip.bytes}, dropped=${roundTrip.dropped}`);
+  check('empty after clear', roundTrip.emptied === 0);
+  check('entry count restored after import', roundTrip.total === 3, `total=${roundTrip.total}`);
+  check('export<->import round-trips the text identically', roundTrip.equal, `bytes=${roundTrip.bytes}, dropped=${roundTrip.dropped}`);
 
   // ---- 5) Merge import dedupes ----
   const mergeCheck = await evaluate(`(async () => {
@@ -165,7 +165,7 @@ async function main() {
     await mc.flush();
     return { added, skipped, before, selfMergeAdded: added };
   })()`);
-  check('自我合并全部跳过（链接/id 去重）', mergeCheck.added === 0 && mergeCheck.skipped === 3, JSON.stringify(mergeCheck));
+  check('self-merge skips everything (dedupe by link/id)', mergeCheck.added === 0 && mergeCheck.skipped === 3, JSON.stringify(mergeCheck));
 
   // Wrap up: clear everything so no test data is left behind
   await evaluate(`(async () => { window.__mc.clearAll(); await window.__mc.flush(); })()`);

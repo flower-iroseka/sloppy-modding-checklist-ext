@@ -45,7 +45,7 @@ chrome.runtime.onInstalled.addListener((details) => {
   void initSync();
 });
 
-// The SW can be recycled and spun up again at any time; alarms survive that, but "打开时拉取" has to be checked on every startup.
+// The SW can be recycled and spun up again at any time; alarms survive that, but "Pull when the extension opens" has to be checked on every startup.
 chrome.runtime.onStartup.addListener(() => void initSync());
 
 // User changed sync settings -> re-arm the alarm; user changed the checklist -> schedule an auto-push.
@@ -173,7 +173,8 @@ chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) =>
   // running SW is old (Chrome's ScriptCache feeds it the previously compiled background.js,
   // see §12.2), so a newly added message type is completely foreign to the SW. This used to
   // `return undefined`, the page got `undefined`, and all the user saw was a useless
-  // "后台没有响应" -- when we could plainly say the versions don't match.
+  // "The background did not respond. Please try again." -- when we could plainly say the
+  // versions don't match.
   if (type?.startsWith(MESSAGE_PREFIX)) {
     sendResponse({ ok: false, message: { key: 'err.bg.unknownMessage', params: { type } } });
     return false;
@@ -224,7 +225,10 @@ async function respond(
       // The port is already closed (page navigated away / SW recycled). Nothing else we can
       // do, so leave a trace in the log. Only the base locale can be rendered here -- it's a
       // pure log, nobody treats it as UI copy.
-      console.warn('[sloppy-mod-checklist] 响应发不出去，消息端口已关闭：', renderMsg(message, 'zh'));
+      console.warn(
+        '[sloppy-mod-checklist] could not send the response, the message port is already closed:',
+        renderMsg(message),
+      );
     }
   }
 }

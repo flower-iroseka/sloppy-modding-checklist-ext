@@ -91,7 +91,7 @@ function form(call: Call): URLSearchParams {
 // ---------------------------------------------------------------- PKCE
 
 describe('createPkce', () => {
-  it('verifier 与 challenge 都是 base64url（不带 + / = 这三个字符）', async () => {
+  it('both the verifier and the challenge are base64url (none of + / =)', async () => {
     const { verifier, challenge } = await createPkce();
     for (const v of [verifier, challenge]) {
       expect(v).not.toMatch(/[+/=]/);
@@ -99,7 +99,7 @@ describe('createPkce', () => {
     }
   });
 
-  it('challenge 确实是 verifier 的 SHA-256（服务器就是这么验的）', async () => {
+  it('the challenge really is the SHA-256 of the verifier (that is how the server checks it)', async () => {
     const { verifier, challenge } = await createPkce();
     const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
     let binary = '';
@@ -108,7 +108,7 @@ describe('createPkce', () => {
     expect(challenge).toBe(expected);
   });
 
-  it('两次不一样（不重用 verifier）', async () => {
+  it('two of them differ (the verifier is not reused)', async () => {
     const a = await createPkce();
     const b = await createPkce();
     expect(a.verifier).not.toBe(b.verifier);
@@ -125,7 +125,7 @@ describe('buildAuthUrl', () => {
     challenge: 'ch',
   };
 
-  it('带上 PKCE 的四件套与固定的 response_type', () => {
+  it('carries the four PKCE parts and a fixed response_type', () => {
     const url = new URL(buildAuthUrl(DROPBOX_SPEC, params));
     expect(url.origin + url.pathname).toBe('https://www.dropbox.com/oauth2/authorize');
     expect(url.searchParams.get('response_type')).toBe('code');
@@ -136,7 +136,7 @@ describe('buildAuthUrl', () => {
     expect(url.searchParams.get('code_challenge_method')).toBe('S256');
   });
 
-  it('scope 用空格连起来', () => {
+  it('scope is joined with spaces', () => {
     const url = new URL(buildAuthUrl(DROPBOX_SPEC, params));
     expect(url.searchParams.get('scope')).toBe(
       'files.content.read files.content.write files.metadata.read',
@@ -145,7 +145,7 @@ describe('buildAuthUrl', () => {
 
   // Without this param, the access_token obtained expires after 4 hours and there's no
   // refresh_token, so the user would inexplicably be asked to re-authorize every few hours.
-  it('各家的私货参数都在（Dropbox 的 token_access_type）', () => {
+  it('the per-provider extra params are there (token_access_type for Dropbox)', () => {
     const url = new URL(buildAuthUrl(DROPBOX_SPEC, params));
     expect(url.searchParams.get('token_access_type')).toBe('offline');
   });
@@ -154,32 +154,32 @@ describe('buildAuthUrl', () => {
 // ---------------------------------------------------------------- Redirect parsing
 
 describe('parseRedirect', () => {
-  it('正常回调取出 code', () => {
+  it('a normal callback yields the code', () => {
     expect(parseRedirect('https://x.chromiumapp.org/?code=abc&state=st', 'st')).toBe('abc');
   });
 
   // A mismatched state means this redirect wasn't started by us, and exchanging it for a
   // token would be handing the authorization code to someone else.
-  it('state 不匹配一律拒绝', () => {
+  it('a mismatched state is rejected outright', () => {
     expect(() => parseRedirect('https://x.chromiumapp.org/?code=abc&state=other', 'st')).toThrow(
       /state 不匹配/,
     );
   });
 
-  // The user clicking "拒绝" isn't a failure, so don't scare them with wording like "授权失败".
-  it('用户点了拒绝 → 说的是「已取消」，不是「失败」', () => {
+  // The user clicking "deny" isn't a failure, so don't scare them with wording like "authorization failed".
+  it('the user clicked deny -> the wording is "cancelled", not "failed"', () => {
     const run = () => parseRedirect('https://x.chromiumapp.org/?error=access_denied&state=st', 'st');
     expect(run).toThrow(/已取消/);
     expect(() => run()).not.toThrow(/失败/);
   });
 
-  it('其它 error 把错误码带出来', () => {
+  it('other errors carry the error code out', () => {
     expect(() =>
       parseRedirect('https://x.chromiumapp.org/?error=invalid_scope&error_description=bad&state=st', 'st'),
     ).toThrow(/invalid_scope.*bad/);
   });
 
-  it('没有 code 也没有 error → 提示重试', () => {
+  it('neither code nor error -> tell the user to retry', () => {
     expect(() => parseRedirect('https://x.chromiumapp.org/?state=st', 'st')).toThrow(/没有返回 code/);
   });
 });
@@ -195,7 +195,7 @@ describe('exchangeCode', () => {
     redirectUri: 'https://x.chromiumapp.org/',
   };
 
-  it('POST 表单到 tokenUrl，带 code_verifier', async () => {
+  it('POSTs the form to tokenUrl with code_verifier', async () => {
     const { calls, deps } = fakeFetch([json({ access_token: 'at', expires_in: 3600 })]);
     await exchangeCode(deps, DROPBOX_SPEC, args);
 
@@ -211,13 +211,13 @@ describe('exchangeCode', () => {
   });
 
   // Public clients (Microsoft / Dropbox) have no secret at all, so don't stuff an empty string in.
-  it('没填 client_secret 时表单里就没有这一项', async () => {
+  it('the field is absent from the form when client_secret is not filled in', async () => {
     const { calls, deps } = fakeFetch([json({ access_token: 'at' })]);
     await exchangeCode(deps, DROPBOX_SPEC, { ...args, clientSecret: undefined });
     expect(form(calls[0]).has('client_secret')).toBe(false);
   });
 
-  it('expires_in 换算成绝对时间，并留出 60 秒余量', async () => {
+  it('expires_in becomes an absolute time, with 60 seconds of margin', async () => {
     const { deps } = fakeFetch([json({ access_token: 'at', expires_in: 3600 })]);
     const now = Date.now();
     const token = await exchangeCode(deps, DROPBOX_SPEC, args);
@@ -225,7 +225,7 @@ describe('exchangeCode', () => {
     expect(token.expiresAt).toBeLessThanOrEqual(now + 3600 * 1000);
   });
 
-  it('没有 access_token → 抛错而不是存一条空 token', async () => {
+  it('no access_token -> throw instead of storing an empty token', async () => {
     const { deps } = fakeFetch([json({ token_type: 'Bearer' })]);
     await expect(exchangeCode(deps, DROPBOX_SPEC, args)).rejects.toThrow(/access_token/);
   });
@@ -234,7 +234,7 @@ describe('exchangeCode', () => {
 describe('refreshToken', () => {
   const args = { refreshToken: 'rt', clientId: 'cid', clientSecret: 'sec' };
 
-  it('grant_type 是 refresh_token', async () => {
+  it('grant_type is refresh_token', async () => {
     const { calls, deps } = fakeFetch([json({ access_token: 'at2', expires_in: 3600 })]);
     await refreshToken(deps, DROPBOX_SPEC, args);
     const body = form(calls[0]);
@@ -244,18 +244,18 @@ describe('refreshToken', () => {
 
   // The server often stops returning a refresh_token on refresh. Losing it means the user
   // has to reconnect by hand next time.
-  it('响应里没有 refresh_token 时沿用旧的', async () => {
+  it('keeps the old refresh_token when the response has none', async () => {
     const { deps } = fakeFetch([json({ access_token: 'at2', expires_in: 3600 })]);
     const token = await refreshToken(deps, DROPBOX_SPEC, args);
     expect(token.refreshToken).toBe('rt');
   });
 
-  it('回了新的就用新的（Dropbox 会轮换）', async () => {
+  it('uses the new one when one comes back (Dropbox rotates it)', async () => {
     const { deps } = fakeFetch([json({ access_token: 'at2', refresh_token: 'rt2' })]);
     expect((await refreshToken(deps, DROPBOX_SPEC, args)).refreshToken).toBe('rt2');
   });
 
-  it('invalid_grant → 让用户重新连接，且不标成「可重试」', async () => {
+  it('invalid_grant -> tell the user to reconnect, and do not mark it "retryable"', async () => {
     const { deps } = fakeFetch([json({ error: 'invalid_grant' }, { status: 400 })]);
     const err = await refreshToken(deps, DROPBOX_SPEC, args).catch((e) => e);
     expect(err).toBeInstanceOf(SyncError);
@@ -263,12 +263,12 @@ describe('refreshToken', () => {
     expect(err.retryable).toBe(false);
   });
 
-  it('invalid_client → 指向 client_id / client_secret', async () => {
+  it('invalid_client -> point at client_id / client_secret', async () => {
     const { deps } = fakeFetch([json({ error: 'invalid_client' }, { status: 401 })]);
     await expect(refreshToken(deps, DROPBOX_SPEC, args)).rejects.toThrow(/client_id/);
   });
 
-  it('5xx 标成可重试', async () => {
+  it('5xx is marked retryable', async () => {
     const { deps } = fakeFetch([new Response('boom', { status: 503 })]);
     const err = await refreshToken(deps, DROPBOX_SPEC, args).catch((e) => e);
     expect(err.retryable).toBe(true);
@@ -276,7 +276,7 @@ describe('refreshToken', () => {
 
   // Some gateways return HTML on error, and `res.json()` throws. Don't let that mask the
   // real status code.
-  it('响应体不是 JSON 时仍按状态码报错', async () => {
+  it('still reports by status code when the response body is not JSON', async () => {
     const { deps } = fakeFetch([
       new Response('<html>nope</html>', { status: 400, headers: { 'Content-Type': 'text/html' } }),
     ]);
@@ -305,7 +305,7 @@ describe('runAuthFlow', () => {
     };
   }
 
-  it('拼出的 URL 里 state 与换 token 时用的是同一个', async () => {
+  it('the state in the built URL is the same one used to exchange the token', async () => {
     const seen: { url?: string } = {};
     let launchedState = '';
     const flowDeps = {
@@ -322,7 +322,7 @@ describe('runAuthFlow', () => {
 
   // The user just closes the popup: nothing comes back, which isn't a failure, so say it
   // in plain words.
-  it('弹窗被关掉 → 说「没有完成连接」', async () => {
+  it('the popup was closed -> say "the connection was not completed"', async () => {
     const { deps } = fakeFetch([json({})]);
     await expect(runAuthFlow(flow(undefined), deps, DROPBOX_SPEC, cfg, redirectUri)).rejects.toThrow(
       /窗口被关闭/,
@@ -334,7 +334,7 @@ describe('runAuthFlow', () => {
   // closes that error window -- which looks exactly like "the user closed it themselves".
   // So that message has to include the address we sent, otherwise the user thinks they
   // didn't finish the steps and has no idea they need to change something in the console.
-  it('把实际发出的重定向地址写进提示里（否则 redirect_uri_mismatch 无处可查）', async () => {
+  it('writes the actual redirect address into the hint (otherwise redirect_uri_mismatch has nowhere to be looked up)', async () => {
     const { deps } = fakeFetch([json({})]);
     const err = (await runAuthFlow(flow(undefined), deps, DROPBOX_SPEC, cfg, redirectUri).catch(
       (e: Error) => e,
@@ -352,7 +352,7 @@ describe('runAuthFlow', () => {
   // that was proved wrong the same day: users hit `No scope requested can be granted for
   // this app` even with Dropbox, which is exactly the same shape. So it came back as
   // `OAuthHelp.misconfig`.
-  it('把这一家经典的配置错误列进提示里（报错原文我们看不到，只能预先给）', async () => {
+  it('lists the classic misconfigurations of this provider in the hint (the raw error is invisible to us, so it has to be given ahead of time)', async () => {
     const { deps } = fakeFetch([json({})]);
     const err = (await runAuthFlow(flow(undefined), deps, DROPBOX_SPEC, cfg, redirectUri).catch(
       (e: Error) => e,
@@ -368,14 +368,14 @@ describe('runAuthFlow', () => {
     expect(err.message).toMatch(/No scope requested/);
   });
 
-  it('别的会话的回调（state 对不上）进不来', async () => {
+  it('a callback from another session (state does not match) cannot get in', async () => {
     const { deps } = fakeFetch([json({ access_token: 'at' })]);
     await expect(
       runAuthFlow(flow('https://abc.chromiumapp.org/?code=x&state=someone-else'), deps, DROPBOX_SPEC, cfg, redirectUri),
     ).rejects.toThrow(/state 不匹配/);
   });
 
-  it('没填 client_id 时连弹窗都不开', async () => {
+  it('does not even open the popup when client_id is missing', async () => {
     let opened = false;
     const flowDeps = {
       launchWebAuthFlow: async () => {
@@ -400,7 +400,7 @@ describe('OAuthSpec.help', () => {
   // When the user opens this card, they're looking at a path that starts with "go register
   // an app first". They deserve to know what that path costs before starting -- not to
   // connect for three days, find they have to reconnect, and come back to the docs.
-  it('每一家都写了「这个授权会向用户要什么」（坦诚，不让人自己猜）', () => {
+  it('every provider says what this authorization will ask of the user (be upfront, do not make them guess)', () => {
     for (const spec of OAUTH_SPECS) {
       expect(spec.help.caution, spec.id).toBeTruthy();
     }
@@ -410,7 +410,7 @@ describe('OAuthSpec.help', () => {
   // wouldn't think of (Dropbox's `/Apps/<app name>/`), nothing on the console page says so,
   // and after the first sync the user may go looking for that file in their own drive.
   // So every provider's caution has to answer "where does the thing land".
-  it('每一家的 caution 都说清了文件会落在哪儿', () => {
+  it('the caution of every provider says where the file will end up', () => {
     for (const spec of OAUTH_SPECS) {
       // The catalog value is a `Msg`, so translate it to Chinese before checking -- it's
       // what the user reads in the README and on the settings page.
@@ -422,8 +422,8 @@ describe('OAuthSpec.help', () => {
   // The "misconfigured" checklist has to be written per provider. This isn't formalism:
   // `misconfig` is only read on the one branch where the popup errors, and on that branch
   // all we have is the provider itself -- an empty checklist means that provider's users
-  // see nothing but a bare "窗口被关闭了".
-  it('每一家都写了「配置没配对时该查哪儿」', () => {
+  // see nothing but a bare "the authorization window was closed".
+  it('every provider says where to look when the config is wrong', () => {
     for (const spec of OAUTH_SPECS) {
       expect(spec.help.misconfig?.length ?? 0, spec.id).toBeGreaterThan(0);
     }
@@ -431,7 +431,7 @@ describe('OAuthSpec.help', () => {
 
   // The other half: don't advertise another provider on your own card -- those two hints
   // are written per provider, and copy-paste easily brings the previous one's copy along.
-  it('每一家的 caution 只提自己', () => {
+  it('the caution of each provider mentions only that provider', () => {
     for (const spec of OAUTH_SPECS) {
       for (const other of OAUTH_SPECS) {
         if (other.id === spec.id) continue;
@@ -477,7 +477,7 @@ describe('makeTokenAccessor', () => {
   const future = () => Date.now() + 10 * 60 * 1000;
   const past = () => Date.now() - 1000;
 
-  it('没过期就直接用，一个请求都不发', async () => {
+  it('uses it directly when not expired, sending no request at all', async () => {
     const { store } = memoryStore({ accessToken: 'live', expiresAt: future() });
     const { calls, deps } = fakeFetch([]);
     const access = makeTokenAccessor({ ...deps, tokens: store }, DROPBOX_SPEC);
@@ -485,7 +485,7 @@ describe('makeTokenAccessor', () => {
     expect(calls).toEqual([]);
   });
 
-  it('过期了就拿 refresh_token 换新的，并写回', async () => {
+  it('when expired, exchanges the refresh_token for a new one and writes it back', async () => {
     const { state, store } = memoryStore({
       accessToken: 'stale',
       refreshToken: 'rt',
@@ -499,7 +499,7 @@ describe('makeTokenAccessor', () => {
     expect(state.token?.accessToken).toBe('fresh');
   });
 
-  it('没连接过 → 让用户去设置页点连接', async () => {
+  it('never connected -> send the user to the settings page to click connect', async () => {
     const { store } = memoryStore(undefined);
     const { deps } = fakeFetch([]);
     const access = makeTokenAccessor({ ...deps, tokens: store }, DROPBOX_SPEC);
@@ -509,7 +509,7 @@ describe('makeTokenAccessor', () => {
   // When the authorization side gives no refresh_token (only an access_token), there's no
   // way forward once it expires and the user has to reconnect -- leaving an unrefreshable
   // record would look "connected", which is the most confusing state of all.
-  it('过期且没有 refresh_token → 清掉记录并提示重连', async () => {
+  it('expired with no refresh_token -> clear the record and ask the user to reconnect', async () => {
     const { state, store } = memoryStore({ accessToken: 'stale', expiresAt: past() });
     const { deps } = fakeFetch([]);
     const access = makeTokenAccessor({ ...deps, tokens: store }, DROPBOX_SPEC);
@@ -518,7 +518,7 @@ describe('makeTokenAccessor', () => {
     expect(state.clears).toBe(1);
   });
 
-  it('刷新被拒（invalid_grant）→ 同样清掉记录', async () => {
+  it('refresh rejected (invalid_grant) -> clears the record the same way', async () => {
     const { state, store } = memoryStore({
       accessToken: 'stale',
       refreshToken: 'rt',

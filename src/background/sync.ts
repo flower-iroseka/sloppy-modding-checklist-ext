@@ -80,7 +80,7 @@ function now(): number {
  * "This DOC_KEY change was sync writing back to itself, don't treat it as a user edit."
  *
  * A pull writes remote content into local, which is also a storage change -- without blocking it,
- * every pull would schedule an auto-push right after, and the user would see "上传中" pop up
+ * every pull would schedule an auto-push right after, and the user would see "Uploading…" pop up
  * the moment the pull finishes. When the content is identical the push is a no-op (`planPush`
  * returns `none` and writes nothing), but it still has to make a network request to compare.
  *
@@ -347,7 +347,7 @@ export async function syncConnect(id: ProviderId): Promise<{ ok: boolean; messag
       redirectUri(),
     );
     await setToken(id, token);
-    // Clear the last error once connected -- otherwise the settings page would show "已连接"
+    // Clear the last error once connected -- otherwise the settings page would show "● Connected"
     // and a red message at the same time.
     const prev = await readSyncStatus();
     await writeSyncStatus({ ...prev, lastError: undefined });
@@ -363,7 +363,7 @@ export async function syncConnect(id: ProviderId): Promise<{ ok: boolean; messag
 }
 
 /**
- * Disconnect: delete the token. The next sync will show the user "还没有连接".
+ * Disconnect: delete the token. The next sync will show the user "○ Not connected".
  *
  * @param id which provider to disconnect
  * @returns always success, plus the message to show the user
@@ -473,9 +473,9 @@ export async function autoPush(): Promise<void> {
     if (!settings.autoSync || !settings.activeProvider) return;
 
     // Don't stack another push on top of a conflict nobody has answered. The condition for the
-    // conflict is "远端更新"; pushing again reaches the same conclusion and just records
-    // the same notice over and over -- and what the user sees is a box that appears on its own,
-    // disappears, and comes back.
+    // conflict is "The remote copy is newer"; pushing again reaches the same conclusion and
+    // just records the same notice over and over -- and what the user sees is a box that
+    // appears on its own, disappears, and comes back.
     const status = await readSyncStatus();
     if (status.pendingConflict) return;
 

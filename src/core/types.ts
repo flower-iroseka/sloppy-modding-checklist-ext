@@ -13,6 +13,9 @@ export type Scope = 'general' | 'individual';
 /** Source: whether the entry goes in that column's Internal or External section. */
 export type Source = 'internal' | 'external';
 
+/** Difficulty tier this entry is about, from the osu! wiki's five levels. */
+export type Difficulty = 'easy' | 'normal' | 'hard' | 'insane' | 'expert';
+
 /** The four cells, shaped like `general-internal`. */
 export type CellId = `${Scope}-${Source}`;
 
@@ -41,6 +44,13 @@ export interface ChecklistEntry {
   scope: Scope;
   /** Which section of that column it goes in. */
   source: Source;
+  /**
+   * The difficulty tier this entry is about, filled in automatically when the entry is
+   * created from a discussion page. Only shown on Individual entries, but kept on the entry
+   * everywhere: moving an entry to General hides the marker without throwing the value away.
+   * Absent means "not stated", not "Normal".
+   */
+  difficulty?: Difficulty;
   /** Summary. Keep the original wording where possible, or a one-line paraphrase. */
   summary: string;
   /** Example links. The first one is usually the original post's permalink. */
@@ -90,6 +100,8 @@ export interface NewEntryInput {
   scope: Scope;
   /** Which section of that column it goes in. */
   source: Source;
+  /** Difficulty tier, same as `ChecklistEntry.difficulty`. Omitted means the field isn't stored. */
+  difficulty?: Difficulty;
   /** Summary, same as `ChecklistEntry.summary`: the original wording, or a one-line paraphrase. */
   summary: string;
   /** Example links. Omitted means an empty array. */

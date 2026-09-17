@@ -32,7 +32,7 @@ function check(label, ok, detail) {
 const list = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
 const target = list.find((t) => t.type === 'page');
 if (!target) {
-  console.error('没有可用的标签页');
+  console.error('no usable tab');
   process.exit(2);
 }
 const ws = new WebSocket(target.webSocketDebuggerUrl);
@@ -162,14 +162,14 @@ const cols = () =>
 await goto(APP);
 await send('Page.bringToFront').catch(() => {});
 const hidden = await warnIfHidden(evaluate);
-console.log(`  标签页可见：${!(await isInteractive(evaluate)) ? '否（将退化）' : '是'}${hidden ? '' : ''}`);
+console.log(`  tab visible: ${!(await isInteractive(evaluate)) ? 'no (will fall back)' : 'yes'}${hidden ? '' : ''}`);
 
 // --- Empty list: no jump buttons ---------------------------------------------
 await seed(0);
 await goto(APP);
 await setViewport(1200);
-check('空列表：没有跳转按钮', (await evaluate(`document.querySelectorAll('.col__jumpbtn').length`)) === 0);
-check('空列表：没有回到顶部按钮', (await evaluate(`document.querySelectorAll('.totop').length`)) === 0);
+check('empty list: no jump buttons', (await evaluate(`document.querySelectorAll('.col__jumpbtn').length`)) === 0);
+check('empty list: no back-to-top button', (await evaluate(`document.querySelectorAll('.totop').length`)) === 0);
 
 // --- Long list: buttons appear ---------------------------------------------------
 await seed(6);
@@ -177,33 +177,33 @@ await goto(APP);
 await setViewport(1200);
 
 check(
-  '长列表：四个区都有锚点 id',
+  'long list: all four zones have an anchor id',
   (await evaluate(
     `['general-internal','general-external','individual-internal','individual-external']
        .every((c) => !!document.getElementById('zone-' + c))`,
   )) === true,
 );
 check(
-  '长列表：两栏各两个跳转按钮（共 4 个）',
+  'long list: two jump buttons per column (4 in total)',
   (await evaluate(`document.querySelectorAll('.col__jumpbtn').length`)) === 4,
 );
 check(
-  '长列表：跳转按钮文字是 Internal / External',
+  'long list: jump button text is Internal / External',
   (await evaluate(
     `[...document.querySelectorAll('.col__jumpbtn')].map((b) => b.textContent.trim()).join(',')`,
   )) === 'Internal,External,Internal,External',
 );
-check('长列表：有回到顶部按钮', (await evaluate(`!!document.querySelector('.totop')`)) === true);
+check('long list: back-to-top button exists', (await evaluate(`!!document.querySelector('.totop')`)) === true);
 
 // --- Single column breakpoint -----------------------------------------------------------
 const wide = await cols();
-check('1200px：仍是两栏', wide.split(' ').length === 2, wide);
+check('1200px: still two columns', wide.split(' ').length === 2, wide);
 await setViewport(1000);
 const mid = await cols();
-check('1000px：仍是两栏', mid.split(' ').length === 2, mid);
+check('1000px: still two columns', mid.split(' ').length === 2, mid);
 await setViewport(880);
 const narrow = await cols();
-check('880px：已收成单栏', narrow.split(' ').length === 1, narrow);
+check('880px: collapsed to a single column', narrow.split(' ').length === 1, narrow);
 await shot('narrow-880');
 await setViewport(1200);
 await shot('wide-1200');
@@ -215,7 +215,7 @@ const hoverProbe = await evaluate(`(() => {
   const bg = getComputedStyle(tab).backgroundColor;
   return { label: tab.textContent.trim(), rest: bg };
 })()`);
-check('有活动标签', hoverProbe !== null, hoverProbe?.label);
+check('there is an active tab', hoverProbe !== null, hoverProbe?.label);
 
 if (hoverProbe) {
   const { root } = await send('DOM.getDocument', { depth: -1 });
@@ -230,9 +230,9 @@ if (hoverProbe) {
   );
   await send('CSS.forcePseudoState', { nodeId, forcedPseudoClasses: [] });
   check(
-    '活动标签 :hover 背景色不变',
+    'active tab :hover keeps the same background color',
     hovered === hoverProbe.rest,
-    `静止 ${hoverProbe.rest} / 悬浮 ${hovered}`,
+    `rest ${hoverProbe.rest} / hover ${hovered}`,
   );
 
   // Inactive tabs still need hover feedback (don't kill hover along with it)
@@ -249,7 +249,7 @@ if (hoverProbe) {
     `getComputedStyle(document.querySelector('.app__tab:not(.app__tab--active)')).backgroundColor`,
   );
   await send('CSS.forcePseudoState', { nodeId: otherId, forcedPseudoClasses: [] });
-  check('非活动标签悬浮仍有反馈', otherHover !== otherRest, `${otherRest} → ${otherHover}`);
+  check('inactive tab still has hover feedback', otherHover !== otherRest, `${otherRest} → ${otherHover}`);
 }
 
 // --- Jump behavior -----------------------------------------------------------
@@ -266,7 +266,7 @@ const clicked = await clickSelector(
   `[...document.querySelectorAll('.col__jumpbtn')].find((b) => b.textContent.includes('External'))`,
   { sleep },
 );
-check('跳转按钮可点击', clicked !== 'missing', clicked);
+check('jump button is clickable', clicked !== 'missing', clicked);
 await sleep(900);
 const afterJump = await evaluate(`(() => {
   const z = document.getElementById('zone-general-external');
@@ -276,30 +276,30 @@ const afterJump = await evaluate(`(() => {
     canScrollMore: window.scrollY + window.innerHeight < document.documentElement.scrollHeight - 4,
   };
 })()`);
-check('跳转真的滚动了', afterJump.scrollY > 0, `scrollY=${afterJump.scrollY}`);
-check('跳转后下面还有内容（否则这条几何断言量不出东西）', afterJump.canScrollMore === true);
+check('the jump actually scrolled', afterJump.scrollY > 0, `scrollY=${afterJump.scrollY}`);
+check('there is still content below after the jump (otherwise this geometry assertion measures nothing)', afterJump.canScrollMore === true);
 // The header is sticky, so with scroll-margin-top: 68 in effect the zone top should land around 68
 check(
-  '跳转后区顶端没被顶栏遮住',
+  'the zone top is not hidden behind the sticky header after the jump',
   afterJump.top >= 50 && afterJump.top <= 90,
   `zone top = ${afterJump.top}`,
 );
 
 const topClicked = await clickSelector(send, evaluate, `document.querySelector('.totop')`, { sleep });
-check('回到顶部可点击', topClicked !== 'missing', topClicked);
+check('back-to-top is clickable', topClicked !== 'missing', topClicked);
 await sleep(900);
 const backTop = await evaluate(`Math.round(window.scrollY)`);
-check('回到顶部真的回到 0', backTop === 0, `scrollY=${backTop}`);
+check('back-to-top really goes back to 0', backTop === 0, `scrollY=${backTop}`);
 
 // --- Short list: buttons disappear ---------------------------------------------------
 await setViewport(1200, 2000);
 await sleep(400);
 check(
-  '视口够高（列表不足一屏）：跳转按钮消失',
+  'tall viewport (list fits one screen): jump buttons disappear',
   (await evaluate(`document.querySelectorAll('.col__jumpbtn').length`)) === 0,
 );
 check(
-  '视口够高：回到顶部消失',
+  'tall viewport: back-to-top disappears',
   (await evaluate(`!!document.querySelector('.totop')`)) === false,
 );
 await setViewport(1200, 900);

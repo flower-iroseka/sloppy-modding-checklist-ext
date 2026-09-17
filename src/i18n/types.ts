@@ -17,9 +17,9 @@ export type MessageKey = keyof typeof zh;
  * An interpolation param.
  *
  * It can nest a `Msg`: core code is full of "wrap one error inside another"
- * (`读取远端失败：<内层的错>`), and the inner one has to follow the locale too, resolved
- * recursively at render time; action words (the `{action}` in `无法{action}。`) are passed
- * the same way.
+ * ("Reading from the remote failed: <the inner error>"), and the inner one has to follow the
+ * locale too, resolved recursively at render time; action words (the `{action}` in
+ * `couldn't {action}`) are passed the same way.
  *
  * It can also be a list of `Msg`s, joined with newlines at render time -- the
  * closed-authorization-window notice lists console pitfalls as a list of paragraphs, and

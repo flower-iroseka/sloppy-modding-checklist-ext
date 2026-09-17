@@ -82,7 +82,7 @@ async function waitFor(expression, label, tries = 80, gap = 150) {
     if (last) return last;
     await sleep(gap);
   }
-  console.log(`  · 等待超时（${label}）：${expression}`);
+  console.log(`  · wait timed out (${label}): ${expression}`);
   return last;
 }
 
@@ -94,7 +94,7 @@ const resolve = (selector) => `document.querySelector(${JSON.stringify(selector)
  */
 async function click(selector) {
   const how = await clickSelector(send, evaluate, resolve(selector), { sleep });
-  if (how === 'missing') throw new Error(`找不到：${selector}`);
+  if (how === 'missing') throw new Error(`not found: ${selector}`);
 }
 
 /**
@@ -123,18 +123,18 @@ await send('Emulation.setDeviceMetricsOverride', {
 
 await bringToFront(send);
 await send('Page.navigate', { url: APP });
-await waitFor(`!!window.__mc && window.__mc.state().hydrated`, 'app 水合');
+await waitFor(`!!window.__mc && window.__mc.state().hydrated`, 'app hydrated');
 await warnIfHidden(evaluate);
 await evaluate(`(async () => { window.__mc.clearAll(); await window.__mc.flush(); })()`);
 await sleep(250);
 
 // ---------------------------------------------------------------- 1) Resolve the author
 
-console.log('== 1) 在 Checklist 页新建条目，粘贴真实 permalink ==');
+console.log('== 1) add an entry on the Checklist page and paste a real permalink ==');
 await click('.zone[data-cell="general-internal"] .zone__add');
 await sleep(400);
 await typeText('#mc-summary', '作者解析冒烟：generalAll 的一条 hype');
-await click('.mc-modal__body .btn'); // the "＋ 添加链接" button
+await click('.mc-modal__body .btn'); // the "add link" button
 await typeText('.mc-linkrow input', PERMALINK);
 await blur('.mc-linkrow input');
 
@@ -143,13 +143,13 @@ const chip = await waitFor(
      const el = document.querySelector('.mc-linkrow__author');
      if (!el) return null;
      const text = el.textContent.trim();
-     // "读取作者…" means it's still in progress, keep waiting
+     // still on the "reading author…" placeholder means it's in progress, keep waiting
      return text === '读取作者…' ? null : text;
    })()`,
-  '作者解析',
+  'author resolution',
 );
-console.log(`  · 链接行上的作者显示：${JSON.stringify(chip)}`);
-check('从 permalink 解析出作者', chip === EXPECTED_AUTHOR, `显示=${JSON.stringify(chip)} 期望=${EXPECTED_AUTHOR}`);
+console.log(`  · author shown on the link row: ${JSON.stringify(chip)}`);
+check('author resolved from the permalink', chip === EXPECTED_AUTHOR, `got=${JSON.stringify(chip)} want=${EXPECTED_AUTHOR}`);
 
 await click('.mc-modal__foot .btn--accent');
 await sleep(700);
@@ -169,16 +169,16 @@ const stored = await waitFor(
      const last = all[all.length - 1];
      return last ? { links: last.links, linkAuthors: last.linkAuthors ?? null, sourceAuthor: last.sourceAuthor ?? null, meta: last.meta ?? null } : null;
    })()`,
-  '条目落盘',
+  'entry written to storage',
 );
-console.log(`  · 落库：${JSON.stringify(stored)}`);
+console.log(`  · stored: ${JSON.stringify(stored)}`);
 check(
-  '解析结果写进 storage 的 linkAuthors（键 = 链接）',
+  'resolved author written to storage linkAuthors (key = link)',
   stored?.linkAuthors?.[PERMALINK]?.username === EXPECTED_AUTHOR,
   JSON.stringify(stored?.linkAuthors),
 );
 check(
-  '没有把作者塞进条目级的 sourceAuthor（那是内容脚本的字段）',
+  'the author was not stuffed into the entry-level sourceAuthor (that field belongs to the content script)',
   stored?.sourceAuthor === null,
   JSON.stringify(stored?.sourceAuthor),
 );
@@ -187,14 +187,14 @@ check(
 // entirely absent passes too (entries created by hand on the Checklist page have no page
 // context, so there's no readable meta to begin with).
 check(
-  'meta 里没有 category（URL 里已经有了）',
+  'no category in meta (the URL already carries it)',
   stored?.meta === null || !('category' in stored.meta),
   JSON.stringify(stored?.meta),
 );
 
 // ---------------------------------------------------------------- 3) Card display
 
-console.log('\n== 2) 卡片的链接文字与布局 ==');
+console.log('\n== 2) card link text and layout ==');
 const cardInfo = await evaluate(`(() => {
   const card = document.querySelector('.card');
   if (!card) return null;
@@ -213,29 +213,29 @@ const cardInfo = await evaluate(`(() => {
     noteBox: noteBox && { top: noteBox.top, bottom: noteBox.bottom, left: noteBox.left, right: noteBox.right },
   };
 })()`);
-console.log(`  · 卡片：${JSON.stringify(cardInfo, null, 2)}`);
+console.log(`  · card: ${JSON.stringify(cardInfo, null, 2)}`);
 
-check('链接文字是「序号 + 作者」', cardInfo?.linkText === `①${EXPECTED_AUTHOR}`, JSON.stringify(cardInfo?.linkText));
-check('卡片下方不再有 .card__foot 那一行', cardInfo?.hasFoot === false, String(cardInfo?.hasFoot));
-check('卡片下方不再显示 @作者', cardInfo?.hasAuthorChip === false, String(cardInfo?.hasAuthorChip));
-check('卡片上没有分类标签', cardInfo?.hasCategoryTag === false, String(cardInfo?.hasCategoryTag));
+check('link text is "index + author"', cardInfo?.linkText === `①${EXPECTED_AUTHOR}`, JSON.stringify(cardInfo?.linkText));
+check('no more .card__foot row under the card', cardInfo?.hasFoot === false, String(cardInfo?.hasFoot));
+check('no @author chip shown under the card anymore', cardInfo?.hasAuthorChip === false, String(cardInfo?.hasAuthorChip));
+check('no category tag on the card', cardInfo?.hasCategoryTag === false, String(cardInfo?.hasCategoryTag));
 
 const sameRow =
   cardInfo?.linkBox && cardInfo?.noteBox
     ? cardInfo.noteBox.top < cardInfo.linkBox.bottom && cardInfo.noteBox.bottom > cardInfo.linkBox.top
     : false;
 check(
-  '备注按钮与链接在同一行（纵向区间重叠）',
+  'note button sits on the same row as the link (vertical ranges overlap)',
   sameRow,
   `link=[${cardInfo?.linkBox?.top}, ${cardInfo?.linkBox?.bottom}] note=[${cardInfo?.noteBox?.top}, ${cardInfo?.noteBox?.bottom}]`,
 );
 
 const noteRightGap = cardInfo?.noteBox ? cardInfo.cardBox.right - cardInfo.noteBox.right : 999;
-check('备注按钮靠右对齐', noteRightGap >= 0 && noteRightGap <= 20, `距卡片右缘 ${noteRightGap.toFixed(1)}px`);
+check('note button is right-aligned', noteRightGap >= 0 && noteRightGap <= 20, `${noteRightGap.toFixed(1)}px from the card's right edge`);
 
 // ---------------------------------------------------------------- 4) Links that shouldn't resolve
 
-console.log('\n== 3) 没有可解析作者的链接：安静处理，不报错 ==');
+console.log('\n== 3) a link with no resolvable author: handled quietly, no error ==');
 await click('.card__iconbtn[aria-label="编辑条目"]');
 await sleep(500);
 await click('.mc-modal__body .btn');
@@ -252,14 +252,14 @@ const third = await evaluate(`(() => {
     chip: r.querySelector('.mc-linkrow__author')?.textContent.trim() ?? null,
   }));
 })()`);
-console.log(`  · 弹层里的链接行：${JSON.stringify(third)}`);
+console.log(`  · link rows in the modal: ${JSON.stringify(third)}`);
 check(
-  '非 osu 链接不显示任何作者标记（原样保留、不误报）',
+  'a non-osu link shows no author chip (left as-is, no false positive)',
   third.at(-1)?.chip === null,
   JSON.stringify(third.at(-1)),
 );
 check(
-  '已解析的那条仍然显示作者（编辑时不重复解析）',
+  'the already-resolved row still shows its author (no re-resolution while editing)',
   third[0]?.chip === EXPECTED_AUTHOR,
   JSON.stringify(third[0]),
 );
@@ -270,7 +270,7 @@ await sleep(400);
 
 // ---------------------------------------------------------------- 5) The content script path
 
-console.log('\n== 4) 内容脚本建的条目：首个链接用条目作者，后面的链接不该蹭 ==');
+console.log('\n== 4) an entry created by the content script: the first link uses the entry author, later links must not piggyback on it ==');
 // On an osu page the content script reads the author straight into sourceAuthor, so it's
 // there at creation time and needs no resolution at all. We reproduce that shape with
 // the real API here instead of driving the real site again.
@@ -294,14 +294,14 @@ const fallback = await evaluate(`(() => {
   const links = [...document.querySelectorAll('.card__link')].map((a) => a.textContent.trim());
   return links;
 })()`);
-console.log(`  · 同一张卡上的两个链接：${JSON.stringify(fallback)}`);
+console.log(`  · two links on the same card: ${JSON.stringify(fallback)}`);
 check(
-  '首个链接显示条目作者（内容脚本读到的那个，无需解析）',
+  'first link shows the entry author (the one the content script read; no resolution needed)',
   fallback[0] === '①AztekX_X',
   JSON.stringify(fallback[0]),
 );
 check(
-  '第二个链接不继承首个的作者（否则就是张冠李戴）',
+  'the second link does not inherit the first one\'s author (that would misattribute it)',
   fallback[1] === '②#5752323',
   JSON.stringify(fallback[1]),
 );

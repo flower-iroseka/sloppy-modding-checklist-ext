@@ -53,7 +53,7 @@ function errName(e: unknown): string {
 /**
  * Turn folder-related exceptions into a sentence you can act on.
  *
- * `NotAllowedError` is the big one here, and it has to point at the "重新授权" button: the
+ * `NotAllowedError` is the big one here, and it has to point at the "Re-authorize" button: the
  * user's only way out is to go back to the settings page and click it, and if the error
  * doesn't say so, they'll just think syncing is broken.
  *
@@ -104,7 +104,7 @@ export function createLocalFolderProvider(deps: LocalFolderDeps): SyncProvider {
    * This runs again on every `read` / `write` / `test`, with no caching: the handle itself
    * is cheap, and permission can be revoked by the browser at any time -- if the permission
    * state were cached, the extension would innocently report "write failed" after the user
-   * revokes it, instead of telling them to click "重新授权".
+   * revokes it, instead of telling them to click "Re-authorize".
    *
    * @param cfg provider config
    * @returns a directory handle with read-write permission
@@ -142,7 +142,7 @@ export function createLocalFolderProvider(deps: LocalFolderDeps): SyncProvider {
     /**
      * Only looks at whether a folder was picked, not at permission (this method has to be
      * synchronous, and permission is async). When permission isn't enough, `test` / `read` /
-     * `write` throw a line pointing at "重新授权", which is more accurate than anything this
+     * `write` throw a line pointing at "Re-authorize", which is more accurate than anything this
      * could say.
      */
     isConfigured(cfg) {
@@ -151,7 +151,7 @@ export function createLocalFolderProvider(deps: LocalFolderDeps): SyncProvider {
     },
 
     /**
-     * "测试连接" here = "the folder is still there, permission is still there".
+     * "Test connection" here = "the folder is still there, permission is still there".
      *
      * Deliberately doesn't create a temp file to try writing: that would make a file appear
      * out of nowhere in the user's drive and then vanish, and the cloud client would run a

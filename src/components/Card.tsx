@@ -2,6 +2,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Pencil, StickyNote, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { DIFFICULTY_LABEL_KEY } from '../core/difficulty';
 import { prettyLink } from '../core/prettyLink';
 import type { ChecklistEntry } from '../core/types';
 import { useLocale } from '../i18n/react';
@@ -73,6 +74,15 @@ export function Card({ entry, index, onEdit, onDelete, onNoteChange }: CardProps
         <span className="card__index">#{index + 1}</span>
 
         <span className="card__summary">{entry.summary || t('common.noSummary')}</span>
+
+        {/* The tier is only meaningful on Individual entries; General ones keep the value in
+            the data but show nothing (see ChecklistEntry.difficulty). */}
+        {entry.difficulty && entry.scope === 'individual' ? (
+          <span className="card__diff" data-difficulty={entry.difficulty}>
+            <span className="card__diff-bar" aria-hidden="true" />
+            {t(DIFFICULTY_LABEL_KEY[entry.difficulty])}
+          </span>
+        ) : null}
 
         <button
           type="button"

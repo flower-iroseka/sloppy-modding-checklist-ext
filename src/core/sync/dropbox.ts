@@ -5,7 +5,7 @@
  * folder. RPC endpoints (`api.dropboxapi.com`) take params in the JSON body; content
  * endpoints (`content.dropboxapi.com`, upload / download) take them in the `Dropbox-API-Arg`
  * header and leave the body to the file. Mixing the two returns a bare HTTP 500 instead of
- * "params in the wrong place", so "测试连接" looks like Dropbox is down while "立即上传" still
+ * "params in the wrong place", so "Test connection" looks like Dropbox is down while "Upload now" still
  * works. The shape is pinned by `tests/sync-oauth-providers.test.ts`, not by the smoke script.
  */
 import { fetchWithTimeout } from './http';
@@ -18,7 +18,7 @@ export const DROPBOX_SPEC: OAuthSpec = {
   displayName: 'provider.dropbox',
   authUrl: 'https://www.dropbox.com/oauth2/authorize',
   tokenUrl: 'https://api.dropboxapi.com/oauth2/token',
-  // metadata.read is there for "测试连接" (reading the root folder's metadata), and it's
+  // metadata.read is there for "Test connection" (reading the root folder's metadata), and it's
   // not redundant: without it the only way to test would be "try uploading once", which
   // actually touches the user's data.
   scopes: ['files.content.read', 'files.content.write', 'files.metadata.read'],

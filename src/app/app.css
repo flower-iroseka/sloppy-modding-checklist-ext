@@ -265,10 +265,10 @@
   min-height: 62px;
 }
 
-/* Empty state: a drag hint plus an "添加一条" button. */
+/* Empty state: a drag hint plus an "Add one" button. */
 .zone__empty {
   flex: 1;
-  /* The empty state now has two things (the drag hint + "添加一条"), so it's a column flex rather than grid */
+  /* The empty state now has two things (the drag hint + "Add one"), so it's a column flex rather than grid */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -365,6 +365,31 @@
   white-space: pre-wrap;
 }
 
+/* Difficulty tier marker, right after the summary. The text stays in the theme's secondary
+   colour -- the tier is told apart by the little bar on its left, which is the one place
+   the osu! difficulty colours appear. */
+.card__diff {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* The bar: shorter than the line it sits next to, and narrow enough to read as a marker
+   rather than a second piece of text. `--diff` comes from the [data-difficulty] mapping in
+   ui.css, which the dialog's picker shares. The fallback keeps the bar visible (as plain
+   text colour) if the theme variables ever go missing. */
+.card__diff-bar {
+  width: 3px;
+  height: 12px;
+  border-radius: 2px;
+  background: var(--diff, var(--text-muted));
+}
+
 /* Small icon buttons like edit / delete. */
 .card__iconbtn {
   flex: none;
@@ -384,7 +409,7 @@
   background: var(--bg-page);
 }
 
-/* How the delete button looks in the two-step confirm state: red border and text, and the button switches to the two characters "删除". */
+/* How the delete button looks in the two-step confirm state: red border and text, and the button switches to the word "Delete". */
 .card__iconbtn--danger,
 .card__iconbtn--danger:hover {
   border-color: color-mix(in srgb, var(--danger) 60%, transparent);
@@ -429,7 +454,7 @@
 /* Discussion-page categories (generalAll / timeline ...) no longer go on the card: that part
    is already in the link URL, and another label on the card just eats width for nothing. */
 
-/* Note button; shows preview text when there's a note, and a dashed-outline "备注" when there isn't. */
+/* Note button; shows preview text when there's a note, and a dashed-outline "Note" when there isn't. */
 .card__notebtn {
   display: inline-flex;
   align-items: center;

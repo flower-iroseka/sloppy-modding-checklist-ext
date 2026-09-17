@@ -195,6 +195,31 @@
   color: var(--accent-ink);
 }
 
+/* The difficulty tiers, keyed off the attribute that the card's marker and the picker's
+   options both carry. This sits in ui.css rather than app.css because ui.css is the one
+   stylesheet the content script also injects into its shadow root -- the picker renders
+   there too, and a mapping defined only in app.css would leave the injected dialog with
+   no colours at all (the marker bar would quietly fall back to the plain text colour). */
+[data-difficulty='easy'] { --diff: var(--diff-easy); }
+[data-difficulty='normal'] { --diff: var(--diff-normal); }
+[data-difficulty='hard'] { --diff: var(--diff-hard); }
+[data-difficulty='insane'] { --diff: var(--diff-insane); }
+[data-difficulty='expert'] { --diff: var(--diff-expert); }
+
+/* The selected difficulty is filled with its own tier colour instead of the accent, so the
+   picker uses the same colour vocabulary as the marker on a card.
+   Mixed towards white on purpose: the tier colours are the ones osu! paints its difficulty
+   icons in, and the darker two (Insane's orange-red, Expert's crimson) leave the dark ink
+   sitting on them with too little separation. Lightening keeps the hue recognisable while
+   making the selected name easy to read. The fallback chain matters for the same reason as
+   .mc-rec below -- with the theme variables missing, --diff never resolves and the option
+   would otherwise end up unfilled. */
+.mc-seg__opt--diff.mc-seg__opt--on,
+.mc-seg__opt--diff.mc-seg__opt--on:hover {
+  background: color-mix(in srgb, var(--diff, var(--accent, #aeff7e)) 70%, #fff);
+  color: var(--accent-ink, #10150c);
+}
+
 /* Note for the auto-detected values (source from the author / scope from the position in
    the discussion). Deliberately very light: it only tells the user "I picked this value
    for you", it is not a call to action, so it is dimmed towards the background colour and
@@ -249,12 +274,12 @@
   color: var(--text-muted, #9aa2b2);
 }
 
-/* The dim state while the author name is being read or could not be read ("读取作者…" / "未识别作者"). */
+/* The dim state while the author name is being read or could not be read ("Reading author…" / "Author not recognised"). */
 .mc-linkrow__author--dim {
   color: color-mix(in srgb, var(--text-muted, #9aa2b2) 55%, var(--bg-page, #16181d));
 }
 
-/* Icon button: a symbol with no text, neutral colour; hover turns it into the danger colour (currently only used for "删除链接"). */
+/* Icon button: a symbol with no text, neutral colour; hover turns it into the danger colour (currently only used for "Remove link"). */
 .mc-iconbtn {
   flex: none;
   border: 1px solid var(--border);
@@ -416,7 +441,7 @@
   margin: 6px 0 10px;
 }
 
-/* Toggles like "自动上传 / 打开时拉取": the whole row is clickable. */
+/* Toggles like "Auto-upload" / "Pull when the extension opens": the whole row is clickable. */
 .sync__check {
   display: inline-flex;
   align-items: center;
@@ -454,7 +479,7 @@
   color: var(--text);
 }
 
-/* "● 已连接 / ○ 未连接". The dots are drawn with characters, so only the text colour needs adjusting. */
+/* "● Connected / ○ Not connected". The dots are drawn with characters, so only the text colour needs adjusting. */
 .sync__badge {
   font-size: 12px;
   font-weight: 400;

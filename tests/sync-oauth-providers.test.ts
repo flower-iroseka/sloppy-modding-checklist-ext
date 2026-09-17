@@ -96,13 +96,13 @@ describe('Dropbox', () => {
   // `Dropbox-API-Arg` header, but `get_metadata` is an RPC endpoint on
   // `api.dropboxapi.com` and the params belong in the JSON body. So the test and the
   // implementation made the same mistake and stayed green together -- until a user
-  // clicked "测试连接" on a real machine and hit an HTTP 500.
+  // clicked "Connection test" on a real machine and hit an HTTP 500.
   //
   // Lesson: a test that pins down a request's shape must also pin down "what shouldn't
   // appear". Asserting only that the path is in the header says nothing about "the body is
   // the right place", and any implementation passes it. The `not.toBeNull()` line below is
   // the half that actually blocks a regression.
-  it('测试连接走 RPC 约定：参数在正文里，不在 Dropbox-API-Arg 头里', async () => {
+  it('the test-connection call follows the RPC convention: params in the body, not in the Dropbox-API-Arg header', async () => {
     const { calls, p } = provider(dropboxApi, DROPBOX_SPEC, [new Response('{}', { status: 200 })]);
     await p.test(cfg);
     expect(calls[0].url).toBe('https://api.dropboxapi.com/2/files/get_metadata');
@@ -122,12 +122,12 @@ describe('Dropbox', () => {
 
   // Dropbox's "file doesn't exist" is 409 + path/not_found, not 404 -- checking for 404
   // would report an error forever.
-  it('还没传过文件（409 path/not_found）算连得上', async () => {
+  it('no file uploaded yet (409 path/not_found) counts as connected', async () => {
     const { p } = provider(dropboxApi, DROPBOX_SPEC, [notFound()]);
     await expect(p.test(cfg)).resolves.toBeUndefined();
   });
 
-  it('读不到文件 → null', async () => {
+  it('unreadable file -> null', async () => {
     const { p } = provider(dropboxApi, DROPBOX_SPEC, [notFound()]);
     expect(await p.read(cfg)).toBeNull();
   });
@@ -136,7 +136,7 @@ describe('Dropbox', () => {
   // Dropbox only returns a bare 500, and from the status code alone you'd read it as "the
   // server is down, retry later" -- except retrying makes no difference, ever. Carrying
   // the raw body through at least shows this isn't something waiting can fix.
-  it('5xx 把服务端原文带进错误里', async () => {
+  it('5xx carries the server response text into the error', async () => {
     const { p } = provider(dropboxApi, DROPBOX_SPEC, [
       new Response('{"error_summary":"invalid_request ..."}', { status: 500 }),
     ]);
@@ -148,7 +148,7 @@ describe('Dropbox', () => {
 
   // Some gateways return a whole page of HTML on error, which is unreadable if pasted
   // into the message as-is.
-  it('5xx 原文过长时截断', async () => {
+  it('5xx truncates an over-long response text', async () => {
     const { p } = provider(dropboxApi, DROPBOX_SPEC, [
       new Response('x'.repeat(5000), { status: 500 }),
     ]);
@@ -157,14 +157,14 @@ describe('Dropbox', () => {
     expect(err.message).toMatch(/…/);
   });
 
-  it('5xx 但正文是空的：不硬塞一对空括号', async () => {
+  it('5xx with an empty body: no empty brackets forced in', async () => {
     const { p } = provider(dropboxApi, DROPBOX_SPEC, [new Response('', { status: 500 })]);
     const err = await p.test(cfg).catch((e) => e);
     expect(err.message).toMatch(/HTTP 500）/);
   });
 
   // File metadata lives in the response headers, not the body -- the body is the file itself.
-  it('从 Dropbox-API-Result 响应头取 server_modified', async () => {
+  it('reads server_modified from the Dropbox-API-Result response header', async () => {
     const { calls, p } = provider(dropboxApi, DROPBOX_SPEC, [
       new Response(DOC, {
         status: 200,
@@ -180,14 +180,14 @@ describe('Dropbox', () => {
     expect(calls[0].url).toBe('https://content.dropboxapi.com/2/files/download');
   });
 
-  it('响应头缺失或不是 JSON 时只给正文，不炸', async () => {
+  it('when the header is missing or not JSON, use only the body, no crash', async () => {
     const { p } = provider(dropboxApi, DROPBOX_SPEC, [
       new Response(DOC, { status: 200, headers: { 'Dropbox-API-Result': 'not json' } }),
     ]);
     expect(await p.read(cfg)).toEqual({ json: DOC });
   });
 
-  it('上传带 mode=overwrite，正文是 octet-stream', async () => {
+  it('upload sends mode=overwrite with an octet-stream body', async () => {
     const { calls, p } = provider(dropboxApi, DROPBOX_SPEC, [new Response('{}', { status: 200 })]);
     await p.write(cfg, DOC);
 
@@ -204,14 +204,14 @@ describe('Dropbox', () => {
 
 // ---------------------------------------------------------------- Shared behavior
 
-describe('OAuth provider 的共同行为', () => {
-  it('client_id 没填（或只有空白）就不算配置完整', () => {
+describe('shared behavior of the OAuth providers', () => {
+  it('a missing (or blank) client_id means the config is not complete', () => {
     const { p } = provider(dropboxApi, DROPBOX_SPEC, []);
     expect(p.isConfigured({ enabled: true, clientId: '  ' })).toBe(false);
     expect(p.isConfigured(cfg)).toBe(true);
   });
 
-  it('enabled 为 false 时也不算', () => {
+  it('enabled=false does not count either', () => {
     const { p } = provider(dropboxApi, DROPBOX_SPEC, []);
     expect(p.isConfigured({ enabled: false, clientId: 'cid' })).toBe(false);
   });
@@ -222,19 +222,19 @@ describe('OAuth provider 的共同行为', () => {
   // synthetic "confidential client" spec to guard this branch -- if a provider that needs
   // a secret is added someday, we won't have to rethink how to write the test. (Google's
   // "Web application" was that kind, and it was cut entirely on 2026-09-11.)
-  it('机密客户端缺 secret 就不完整', () => {
+  it('a confidential client without a secret is incomplete', () => {
     const confidential: OAuthSpec = { ...DROPBOX_SPEC, requiresSecret: true };
     const { p } = provider(dropboxApi, confidential, []);
     expect(p.isConfigured({ enabled: true, clientId: 'cid' })).toBe(false);
     expect(p.isConfigured({ enabled: true, clientId: 'cid', clientSecret: 's' })).toBe(true);
   });
 
-  it('不需要 secret 的那家缺 secret 也完整', () => {
+  it('the provider that does not need a secret is complete without one', () => {
     const { p } = provider(dropboxApi, DROPBOX_SPEC, []);
     expect(p.isConfigured({ enabled: true, clientId: 'cid' })).toBe(true);
   });
 
-  it('没连接过时给的是「去设置页点连接」，而不是晦涩的 401', async () => {
+  it('when never connected it says "go click connect on the settings page", not a cryptic 401', async () => {
     const f = fakeFetch([]);
     const p = createOAuthProvider(DROPBOX_SPEC, dropboxApi, {
       fetch: f.fetch,

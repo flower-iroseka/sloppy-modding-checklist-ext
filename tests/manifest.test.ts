@@ -25,7 +25,7 @@ const manifest = JSON.parse(
   // files drift apart that quietly stops working -- the reload looks like it happened,
   // but the old code is still running, with the same symptoms as mixing old and new
   // builds.
-  it('package.json 与 manifest.json 的版本号一致', () => {
+  it('package.json and manifest.json versions match', () => {
     const pkg = JSON.parse(
       readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
     ) as { version: string };
@@ -33,7 +33,7 @@ const manifest = JSON.parse(
   });
 
 describe('manifest.json', () => {
-  it('每个 provider 声明的域都必须在 host_permissions 里', () => {
+  it('every domain a provider declares must be in host_permissions', () => {
     const missing = allOrigins().filter((o) => !manifest.host_permissions.includes(o));
     expect(missing).toEqual([]);
   });
@@ -46,7 +46,7 @@ describe('manifest.json', () => {
   // up when you delete something" can only be caught by a test.
   const NON_PROVIDER_ORIGINS = ['https://osu.ppy.sh/*']; // used by the content script, doesn't belong to any provider
 
-  it('host_permissions 里没有没人认领的域（删 provider 时的残留）', () => {
+  it('no unclaimed domain in host_permissions (leftovers from deleting a provider)', () => {
     const claimed = new Set([...allOrigins(), ...NON_PROVIDER_ORIGINS]);
     expect(manifest.host_permissions.filter((o) => !claimed.has(o))).toEqual([]);
   });
@@ -56,7 +56,7 @@ describe('manifest.json', () => {
   // "network problem". The ones that don't must have no domains; add one and the
   // extension needlessly asks the user for a permission it doesn't use -- the
   // "Read and change all your data on all websites" line at install time scares people off.
-  it('联网的每家都声明了域，不联网的每家都没有', () => {
+  it('every provider that goes online declares its domains, every one that does not has none', () => {
     for (const desc of PROVIDER_CATALOG) {
       if (desc.id === 'webdav') {
         // The WebDAV address is filled in by the user, so the domain is only known at
@@ -74,22 +74,22 @@ describe('manifest.json', () => {
     }
   });
 
-  it('host_permissions 里的每一项都是合法的匹配串', () => {
+  it('every entry in host_permissions is a valid match pattern', () => {
     for (const pattern of manifest.host_permissions) {
       expect(pattern).toMatch(/^https:\/\/[^\s]+\/\*$/);
     }
   });
 
   // This is what WebDAV's on-demand permission request relies on; delete it and that path fails silently.
-  it('留着 optional_host_permissions（WebDAV 运行时申请用）', () => {
+  it('optional_host_permissions is there (for WebDAV to request at runtime)', () => {
     expect(manifest.optional_host_permissions).toContain('https://*/*');
   });
 
-  it('identity 权限在（launchWebAuthFlow 要用）', () => {
+  it('the identity permission is there (needed by launchWebAuthFlow)', () => {
     expect(manifest.permissions).toContain('identity');
   });
 
-  it('内容脚本仍然只注入 discussion 页', () => {
+  it('the content script still injects only into discussion pages', () => {
     expect(manifest.content_scripts[0].matches).toEqual([
       'https://osu.ppy.sh/beatmapsets/*/discussion*',
     ]);

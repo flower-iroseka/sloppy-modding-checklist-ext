@@ -53,7 +53,7 @@ async function main() {
           .filter(h => /^\\/beatmapsets\\/\\d+$/.test(h));
         return a[0] ?? null; })()`,
     );
-    if (!href) throw new Error('listing 页面找不到 beatmapset 链接（可能被 Cloudflare/登录墙拦住）');
+    if (!href) throw new Error('no beatmapset link found on the listing page (probably blocked by Cloudflare / a login wall)');
     url = `https://osu.ppy.sh${href}/discussion`;
   }
 
@@ -102,6 +102,23 @@ async function main() {
     return {
       title: document.title,
       url: location.href,
+      // The difficulty reader (src/core/beatmap.ts) rests entirely on this tag being in the
+      // page's own DOM. Nothing unit-tests that -- it's a fact about the live site -- so it
+      // gets printed here, along with what the beatsets' difficulties are called and how many
+      // stars they have. When a "+" click offers no tier, this is the first thing to look at.
+      beatmapsetJson: {
+        present: q('script#json-beatmapset') > 0,
+        beatmaps: (() => {
+          try {
+            const raw = JSON.parse(document.querySelector('script#json-beatmapset').textContent);
+            return (raw.beatmaps ?? []).map((b) => ({
+              id: b.id, version: b.version, stars: b.difficulty_rating, mode: b.mode,
+            }));
+          } catch (e) {
+            return 'unreadable: ' + e.message;
+          }
+        })(),
+      },
       loggedIn: !!document.querySelector('a[href^="/users/"] .avatar--online, .js-current-user-avatar, [data-current-user-id]'),
       navbarUser: (document.querySelector('.js-current-user-avatar img, .navbar .avatar') || {}).outerHTML?.slice(0, 200) ?? null,
       candidates: cands,

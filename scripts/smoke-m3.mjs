@@ -1,5 +1,5 @@
 // M3 end-to-end smoke (dev only): the content script on a real osu.ppy.sh discussion page --
-// the "＋ 添加到 Checklist" button on each post, the FAB, the shadow DOM overlay it opens
+// the "＋ add to Checklist" button on each post, the FAB, the shadow DOM overlay it opens
 // (body and permalink prefilled), the source suggestion (post author vs current logged-in
 // user, logged out counts as external), and the entry really landing in chrome.storage.local
 // after submit. Needs the real site, so it won't run without a network connection.
@@ -105,7 +105,7 @@ async function evaluateInContentWorld(expression, { awaitPromise = true } = {}) 
     if (r.exceptionDetails) continue; // not our world (can't reach chrome.storage)
     return r.result?.value;
   }
-  throw new Error('找不到内容脚本的隔离世界');
+  throw new Error("content script's isolated world not found");
 }
 
 /**
@@ -154,7 +154,7 @@ function findExpr(selector) {
  */
 async function click(selector) {
   const how = await clickSelector(send, evaluate, findExpr(selector), { sleep });
-  if (how === 'missing') throw new Error(`找不到元素：${selector}`);
+  if (how === 'missing') throw new Error(`element not found: ${selector}`);
 }
 
 /**
@@ -205,7 +205,7 @@ async function findDiscussionUrl() {
 
 // ---------------------------------------------------------------- Test cases
 
-console.log('== M3: 真站 post → checklist ==');
+console.log('== M3: real site post → checklist ==');
 
 await send('Page.enable');
 await send('Runtime.enable');
@@ -232,7 +232,7 @@ await sleep(200);
 
 const url = await findDiscussionUrl();
 if (!url) {
-  console.error('没能从 beatmapsets 列表里找到一张地图的 discussion 链接');
+  console.error('could not find a beatmap discussion link from the beatmapsets listing');
   process.exit(1);
 }
 console.log(`discussion: ${url}`);
@@ -250,15 +250,15 @@ for (let i = 0; i < 80; i++) {
 
 const posts = await evaluate(`document.querySelectorAll('.beatmap-discussion-post[data-post-id]').length`);
 const discussions = await evaluate(`document.querySelectorAll('.beatmap-discussion').length`);
-check('真站页面识别到 discussion', discussions > 0, `discussion=${discussions} post=${posts}`);
-check('每条 post 都注入了添加按钮', injected > 0 && injected === posts, `按钮=${injected} / post=${posts}`);
-check('左下角注入了 FAB', (await evaluate(`!!document.getElementById('mc-fab')`)) === true);
+check('real site page has discussions', discussions > 0, `discussion=${discussions} post=${posts}`);
+check('every post got an add button injected', injected > 0 && injected === posts, `buttons=${injected} / post=${posts}`);
+check('FAB injected in the bottom left', (await evaluate(`!!document.getElementById('mc-fab')`)) === true);
 // This button moved: it used to sit in the bottom right, overlapping osu's own
 // `.floating-toolbar` (the two round "back to top" buttons). So besides "is it there", we
 // measure the geometry too -- position and size are the whole point of this change, and
 // checking only that it exists proves nothing.
 check(
-  'FAB 是 50×50 的圆（和 osu 的回到顶部一样大）',
+  "FAB is a 50×50 circle (same size as osu's back-to-top)",
   await evaluate(`(() => {
     const r = document.getElementById('mc-fab').getBoundingClientRect();
     const radius = getComputedStyle(document.getElementById('mc-fab')).borderRadius;
@@ -266,7 +266,7 @@ check(
   })()`),
 );
 check(
-  'FAB 在左下角，且和 osu 的浮动工具栏不重叠',
+  "FAB sits in the bottom left and does not overlap osu's floating toolbar",
   await evaluate(`(() => {
     const fab = document.getElementById('mc-fab').getBoundingClientRect();
     const inLeft = fab.left < innerWidth / 2;
@@ -281,15 +281,15 @@ check(
   })()`),
 );
 check(
-  'FAB 圆钮里有图标（圆形放不下文字，得靠图标说明自己是什么）',
+  'the round FAB has an icon (text does not fit in a circle, so the icon has to say what it is)',
   await evaluate(`document.getElementById('mc-fab').querySelectorAll('svg path').length`) > 0,
 );
 check(
-  '浮层宿主已挂载（shadow root）',
+  'overlay host mounted (shadow root)',
   (await evaluate(`!!document.getElementById('mc-overlay-host')?.shadowRoot`)) === true,
 );
 
-check('内容脚本能看到 chrome.storage', await findContentWorld());
+check('content script can see chrome.storage', await findContentWorld());
 
 // Can the isolated world read page globals? That's exactly what makes or breaks the source suggestion
 const worldSees = await evaluateInContentWorld(
@@ -300,10 +300,10 @@ await sleep(150);
 const worldSees2 = await evaluateInContentWorld(
   `typeof window.__mcMainMarker !== 'undefined'`,
 ).catch(() => null);
-console.log(`  · 隔离世界看到 chrome：${worldSees?.hasChrome}`);
-console.log(`  · 隔离世界看到 window.currentUser：${worldSees?.seesCurrentUser}`);
-console.log(`  · 隔离世界看到主世界刚设的标记：${worldSees2}（false = 确实是隔离世界）`);
-console.log(`  · 主世界的 currentUser：${JSON.stringify(await evaluate(`window.currentUser ?? null`))}`);
+console.log(`  · isolated world sees chrome: ${worldSees?.hasChrome}`);
+console.log(`  · isolated world sees window.currentUser: ${worldSees?.seesCurrentUser}`);
+console.log(`  · isolated world sees the marker just set in the main world: ${worldSees2} (false = it really is isolated)`);
+console.log(`  · currentUser in the main world: ${JSON.stringify(await evaluate(`window.currentUser ?? null`))}`);
 
 // Read the first post's author and body to use as the assertion baseline
 const firstPost = await evaluate(`(() => {
@@ -319,13 +319,13 @@ const firstPost = await evaluate(`(() => {
     postId: post.dataset.postId,
   };
 })()`);
-console.log(`  · 第一条 post：作者=${firstPost.authorName}(${firstPost.authorId}) postId=${firstPost.postId}`);
+console.log(`  · first post: author=${firstPost.authorName}(${firstPost.authorId}) postId=${firstPost.postId}`);
 console.log(`  · permalink=${firstPost.permalink}`);
 
-check('第一条 post 读到了永久链接', typeof firstPost.permalink === 'string' && firstPost.permalink.includes('/discussion/'));
+check('first post has a readable permalink', typeof firstPost.permalink === 'string' && firstPost.permalink.includes('/discussion/'));
 
 // 1) Click the button on the first post -> the overlay opens
-console.log(`  · 按钮可见性: ${JSON.stringify(await evaluate(`(() => {
+console.log(`  · button visibility: ${JSON.stringify(await evaluate(`(() => {
   const b = document.querySelector('.mc-add-btn');
   const cs = getComputedStyle(b);
   const r = b.getBoundingClientRect();
@@ -346,21 +346,21 @@ const modal = await evaluate(`(() => {
   const linkInputs = [...m.querySelectorAll('input')].map(i => i.value);
   return { summary: ta ? ta.value : null, hrefs, segOn: on, inputs: linkInputs };
 })()`);
-check('点 post 上的按钮后弹层打开', modal !== null);
-check('弹层预填了帖子正文作为概述', !!modal?.summary && modal.summary.length > 0, JSON.stringify(modal?.summary?.slice(0, 30)));
+check('overlay opens after clicking the button on the post', modal !== null);
+check('overlay prefills the post body as the summary', !!modal?.summary && modal.summary.length > 0, JSON.stringify(modal?.summary?.slice(0, 30)));
 check(
-  '弹层预填了永久链接',
+  'overlay prefills the permalink',
   JSON.stringify(modal?.hrefs ?? []).includes(firstPost.permalink) ||
     JSON.stringify(modal?.inputs ?? []).includes(firstPost.permalink),
   JSON.stringify(modal?.inputs ?? modal?.hrefs),
 );
-check('弹层默认落在 General × External', JSON.stringify(modal?.segOn) === JSON.stringify(['General', 'External']), JSON.stringify(modal?.segOn));
+check('overlay defaults to General × External', JSON.stringify(modal?.segOn) === JSON.stringify(['General', 'External']), JSON.stringify(modal?.segOn));
 
 // 2) Submit -> the entry lands in storage
 const beforeCount = await evaluateInContentWorld(
   `(async () => { const b = await chrome.storage.local.get('checklist'); return Object.values(b.checklist.cells).flat().length; })()`,
 ).catch(() => null);
-console.log(`  · 提交前 chrome.storage 里的条目数：${beforeCount}`);
+console.log(`  · entries in chrome.storage before submit: ${beforeCount}`);
 
 await click('.mc-modal__foot .btn--accent');
 await sleep(600);
@@ -376,17 +376,17 @@ const after = await evaluateInContentWorld(
 ).catch((e) => ({ error: String(e) }));
 
 check(
-  '提交后条目落进 chrome.storage.local',
+  'entry lands in chrome.storage.local after submit',
   (after?.total ?? 0) === (beforeCount ?? 0) + 1,
   `before=${beforeCount} after=${after?.total}${after?.error ? ' err=' + after.error : ''}`,
 );
 check(
-  '条目归到 General × External（按推荐来源）',
+  'entry filed under General × External (from the suggested source)',
   after?.last?.scope === 'general' && after?.last?.source === 'external',
   JSON.stringify({ scope: after?.last?.scope, source: after?.last?.source }),
 );
 check(
-  '条目带上了帖子链接与 meta',
+  'entry carries the post link and meta',
   (after?.last?.links ?? []).includes(firstPost.permalink) &&
     after?.last?.meta?.beatmapsetId !== undefined,
   JSON.stringify({ links: after?.last?.links, meta: after?.last?.meta }),
@@ -394,12 +394,12 @@ check(
 // The content script path is the only place that sees the page's category -- which is exactly
 // why it shouldn't be copied into meta. The category is already in the URL path of links[0].
 check(
-  'meta 里没有 category（分类在链接 URL 里，不重复存）',
+  'no category in meta (the category lives in the link URL, not stored twice)',
   after?.last?.meta !== undefined && !('category' in after.last.meta),
   JSON.stringify(after?.last?.meta),
 );
 check(
-  '条目记录了来源作者',
+  'entry records the source author',
   after?.last?.sourceAuthor?.id === firstPost.authorId,
   JSON.stringify(after?.last?.sourceAuthor),
 );
@@ -419,7 +419,7 @@ if (typeof authorId === 'number') {
   const relayed = await evaluateInContentWorld(
     `(async () => { const r = await chrome.runtime.sendMessage({ type: 'mc:get-user' }); return r; })()`,
   ).catch((e) => ({ error: String(e) }));
-  check('SW 能把主世界的 currentUser 中转给内容脚本', relayed?.id === authorId, JSON.stringify(relayed));
+  check("the SW can relay the main world's currentUser to the content script", relayed?.id === authorId, JSON.stringify(relayed));
 
   await click('.mc-add-btn');
   await sleep(500);
@@ -428,7 +428,7 @@ if (typeof authorId === 'number') {
     const m = document.getElementById('mc-overlay-host').shadowRoot.querySelector('.mc-modal');
     return m ? [...m.querySelectorAll('.mc-seg__opt--on')].map(e => e.textContent.trim()) : null;
   })()`);
-  check('作者 == 当前用户 → 弹层默认选中 Internal', JSON.stringify(segs) === JSON.stringify(['General', 'Internal']), JSON.stringify(segs));
+  check('author == current user → overlay defaults to Internal', JSON.stringify(segs) === JSON.stringify(['General', 'Internal']), JSON.stringify(segs));
 
   const before2 = await evaluateInContentWorld(
     `(async () => { const b = await chrome.storage.local.get('checklist'); return b.checklist.cells['general-internal'].length; })()`,
@@ -443,7 +443,7 @@ if (typeof authorId === 'number') {
       return { len: list.length, last: list[list.length - 1] };
     })()`,
   ).catch((e) => ({ error: String(e) }));
-  check('提交后落在 General × Internal', (internal?.len ?? 0) === before2 + 1 && internal?.last?.source === 'internal', JSON.stringify({ before2, len: internal?.len, source: internal?.last?.source }));
+  check('lands in General × Internal after submit', (internal?.len ?? 0) === before2 + 1 && internal?.last?.source === 'internal', JSON.stringify({ before2, len: internal?.len, source: internal?.last?.source }));
 
   // Same logged-in user, now click someone else's post -> should suggest external
   const otherPost = await evaluate(`(() => {
@@ -466,14 +466,14 @@ if (typeof authorId === 'number') {
       return m ? [...m.querySelectorAll('.mc-seg__opt--on')].map(e => e.textContent.trim()) : null;
     })()`);
     check(
-      '作者是别人 → 推荐回到 External',
+      'author is someone else → suggestion goes back to External',
       JSON.stringify(segs2) === JSON.stringify(['General', 'External']),
-      `当前用户=${authorId} 帖子作者=${otherPost.name}(${otherPost.authorId}) 选中=${JSON.stringify(segs2)}`,
+      `current user=${authorId} post author=${otherPost.name}(${otherPost.authorId}) selected=${JSON.stringify(segs2)}`,
     );
     await click('.mc-modal__foot .btn').catch(() => {});
     await sleep(250);
   } else {
-    console.log('  · 页面上没有第二个不同作者的 post，跳过 external 对照');
+    console.log('  · no second post by a different author on the page, skipping the external control');
   }
   await evaluate(`(() => { const b = document.getElementById('mc-probe-btn'); if (b) b.removeAttribute('id'); })()`);
 
@@ -481,7 +481,7 @@ if (typeof authorId === 'number') {
   await click('.mc-modal__foot .btn').catch(() => {});
   await sleep(250);
 } else {
-  console.log('  · 第一条 post 没读到作者 id，跳过 internal 分支');
+  console.log('  · no author id on the first post, skipping the internal branch');
 }
 
 // ---------------------------------------------------------------- Scope auto-detected from the page position
@@ -550,7 +550,7 @@ async function openDialogAndRead() {
     }
     return [...ids];
   })()`);
-  console.log(`  · 这张谱面下的难度：${JSON.stringify(diffIds)}`);
+  console.log(`  · difficulties under this beatmap: ${JSON.stringify(diffIds)}`);
 
   /**
    * Try a given category page across the difficulties (they differ a lot in content) and
@@ -562,9 +562,9 @@ async function openDialogAndRead() {
   async function findPopulatedPage(mode) {
     for (const diff of (diffIds ?? []).slice(0, 4)) {
       const u = `${base}/discussion/${diff}/${mode}`;
-      console.log(`  · 试 ${mode}：${u}`);
+      console.log(`  · trying ${mode}: ${u}`);
       if (await gotoDiscussionPage(u)) return u;
-      console.log(`    · 这个难度的 ${mode} 页没有可添加的 post`);
+      console.log(`    · the ${mode} page for this difficulty has no post to add`);
     }
     return null;
   }
@@ -572,13 +572,13 @@ async function openDialogAndRead() {
   // --- General (current difficulty) -> general
   const genUrl = await findPopulatedPage('general');
   if (!genUrl) {
-    console.log('  · 没有非空的 General(当前难度) 页，跳过该分支');
+    console.log('  · no non-empty General (current difficulty) page, skipping that branch');
   } else {
     const r = await openDialogAndRead();
     check(
-      'General(当前难度) 页 → 范围仍是 General',
+      'General (current difficulty) page → scope is still General',
       r?.mode === 'general' && r?.segOn?.[0] === 'General',
-      `${genUrl} mode=${r?.mode} 选中=${JSON.stringify(r?.segOn)}`,
+      `${genUrl} mode=${r?.mode} selected=${JSON.stringify(r?.segOn)}`,
     );
   }
 
@@ -586,19 +586,19 @@ async function openDialogAndRead() {
   const visited = await findPopulatedPage('timeline');
 
   if (!visited) {
-    console.log(`  · ${JSON.stringify(diffIds)} 里没有非空的时间轴，跳过 individual 分支（单元测试已覆盖映射）`);
+    console.log(`  · no non-empty timeline among ${JSON.stringify(diffIds)}, skipping the individual branch (unit tests already cover the mapping)`);
   } else {
     const tl = await openDialogAndRead();
-    check('timeline 页的激活分类是 timeline', tl?.mode === 'timeline', String(tl?.mode));
+    check('the active category on the timeline page is timeline', tl?.mode === 'timeline', String(tl?.mode));
     // Only assert the scope segment: the source segment depends on "logged-in user vs post
     // author" and has nothing to do with what we're verifying here
     check(
-      'timeline 页 → 范围自动识别为 Individual',
+      'timeline page → scope auto-detected as Individual',
       tl?.segOn?.[0] === 'Individual',
-      `${visited} 选中=${JSON.stringify(tl?.segOn)}`,
+      `${visited} selected=${JSON.stringify(tl?.segOn)}`,
     );
     check(
-      '弹层显示「已按讨论页位置识别」提示',
+      'overlay shows the "detected from the discussion page position" hint',
       (tl?.rec ?? []).some((t) => t.includes('位置') && t.includes('Individual')),
       JSON.stringify(tl?.rec),
     );
@@ -611,9 +611,9 @@ await click('#mc-fab');
 await sleep(1200);
 const targetsAfter = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
 check(
-  'FAB 经 SW 打开了 app.html',
+  'FAB opened app.html through the SW',
   targetsAfter.some((t) => t.url.includes(`chrome-extension://${extId}/app.html`)),
-  `${targetsBefore} → ${targetsAfter.length} 个 target`,
+  `${targetsBefore} → ${targetsAfter.length} targets`,
 );
 
 console.log(failures.length === 0 ? '\nALL M3 SMOKE CHECKS PASSED' : `\nFAILURES: ${failures.join(', ')}`);

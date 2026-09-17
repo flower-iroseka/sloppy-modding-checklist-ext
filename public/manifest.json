@@ -2,8 +2,8 @@
   "manifest_version": 3,
   "name": "Sloppy Modding Checklist",
   "short_name": "Sloppy Checklist",
-  "description": "在 osu! beatmap discussion 上，按 General/Individual × Internal/External 四格维护 modding checklist。",
-  "version": "0.4.0",
+  "description": "Maintain a modding checklist on osu! beatmap discussions: four cells, each entry tagged by the difficulty it applies to.",
+  "version": "0.1.0",
   "icons": {
     "16": "icons/16.png",
     "32": "icons/32.png",

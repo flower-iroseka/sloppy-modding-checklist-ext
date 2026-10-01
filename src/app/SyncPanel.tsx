@@ -32,9 +32,7 @@ import type {
   SyncSettings,
   SyncStatus,
   SyncStrategy,
-  WebDavConfig,
 } from '../core/sync/types';
-import { configOriginPattern, validateConfig } from '../core/sync/webdav';
 import type { MessageKey, Msg } from '../i18n';
 import { useLocale } from '../i18n/react';
 import {
@@ -62,7 +60,6 @@ export function SyncPanel() {
   const { t, tm, tmMarkup, locale } = useLocale();
   const [settings, setSettings] = useState<SyncSettings | null>(null);
   const [status, setStatus] = useState<SyncStatus>({});
-  const [draft, setDraft] = useState<WebDavConfig | null>(null);
   const [oauthDrafts, setOauthDrafts] = useState<Record<string, OAuthDraft>>({});
   const [connected, setConnected] = useState<Partial<Record<ProviderId, boolean>>>({});
   // Folder permission is "state that changes", so it's stored apart from the config: it isn't
@@ -89,7 +86,6 @@ export function SyncPanel() {
       if (!alive) return;
       setSettings(s);
       setStatus(st);
-      setDraft(webdavDraft(s));
       setOauthDrafts(oauthDraftsFrom(s));
       setConflict(st.pendingConflict);
       void refreshConnected(setConnected);
@@ -121,7 +117,7 @@ export function SyncPanel() {
     };
   }, []);
 
-  if (!settings || !draft) {
+  if (!settings) {
     return (
       <section className="panel">
         <h2 className="panel__title">{t('sync.title')}</h2>
@@ -136,7 +132,6 @@ export function SyncPanel() {
   // only method that needs no app registration and works out of the box (§7.7).
   const active: ProviderId = settings.activeProvider ?? PROVIDER_CATALOG[0].id;
   const desc = catalogEntry(active);
-  const isWebDav = active === 'webdav';
   const isFolder = active === 'localFolder';
   const canPickFolder = pickerFn() !== undefined;
   const folderCfg = settings.config.localFolder as LocalFolderConfig | undefined;
@@ -188,31 +183,9 @@ export function SyncPanel() {
   };
 
   /**
-   * Persist the WebDAV config from the form and request the host permission for that server.
-   *
-   * It has to be called inside a user gesture: `permissions.request` requires being in a user
-   * gesture, so it goes first in the click handler with no other await in between -- one more
-   * await is one more chance the gesture expires.
-   *
-   * @throws {SyncError} the user didn't grant the host permission for this server
-   */
-  const saveWebDav = async () => {
-    const pattern = configOriginPattern(draft);
-    const granted = pattern ? await chrome.permissions.request({ origins: [pattern] }) : false;
-    if (!granted) throw new SyncError({ key: 'sync.err.noHostPermission' });
-    const next = normalizeSyncSettings({
-      ...settings,
-      activeProvider: 'webdav',
-      config: { ...settings.config, webdav: { ...draft, enabled: true } },
-    });
-    await writeSyncSettings(next);
-    setSettings(next);
-  };
-
-  /**
-   * Save config for the two OAuth providers. There's no permission request step -- their
-   * domains are fixed and already declared statically in the manifest's `host_permissions`
-   * (§7.6), granted at install time. That's the only difference between them and WebDAV.
+   * Save the OAuth provider's config. There's no permission request step -- its domains are
+   * fixed and already declared statically in the manifest's `host_permissions` (§7.6),
+   * granted at install time.
    */
   const saveOAuth = async () => {
     const id = active;
@@ -241,7 +214,7 @@ export function SyncPanel() {
    */
   const saveBeforeNetwork = () => {
     if (isFolder) return Promise.resolve();
-    return isWebDav ? saveWebDav() : saveOAuth();
+    return saveOAuth();
   };
 
   /**
@@ -445,8 +418,6 @@ export function SyncPanel() {
       setNotice({ key: 'sync.keptLocal' });
     });
 
-  /** A field in the WebDAV form changed. */
-  const patchDraft = (patch: Partial<WebDavConfig>) => setDraft({ ...draft, ...patch });
   /** A field in one OAuth form changed. */
   const patchOAuth = (id: ProviderId, patch: Partial<OAuthDraft>) =>
     setOauthDrafts((prev) => {
@@ -460,9 +431,7 @@ export function SyncPanel() {
         ? null
         : { key: 'sync.err.folderNeedsReauth' }
       : { key: 'sync.err.noFolderChosen' }
-    : isWebDav
-      ? validateConfig(draft)
-      : oauthConfigError(oauthDrafts[active]);
+    : oauthConfigError(oauthDrafts[active]);
   const disabled = busy !== null || configError !== null;
 
   // The three conflict sentences are used in three places (announcement, headline, body), so compute once.
@@ -515,19 +484,6 @@ export function SyncPanel() {
           onReauthorize={reauthorizeFolder}
           onForget={() => void forgetFolder()}
         />
-      ) : isWebDav ? (
-        <WebDavForm
-          draft={draft}
-          busy={busy}
-          disabled={disabled}
-          configError={configError}
-          error={error}
-          notice={notice}
-          onChange={patchDraft}
-          onTest={() => void testConnection()}
-          onPush={() => void push(false)}
-          onPull={() => void pull()}
-        />
       ) : desc?.oauth ? (
         <OAuthCard
           spec={desc.oauth}
@@ -543,7 +499,7 @@ export function SyncPanel() {
         />
       ) : null}
 
-      {!isWebDav && (
+      {
         // `data-action` / `data-role` are the anchors the smoke test recognizes (same as OAuthCard), don't change them casually.
         <div className="row sync__block" data-role="sync-actions">
           <button
@@ -579,11 +535,9 @@ export function SyncPanel() {
             </span>
           )}
         </div>
-      )}
-      {/* The result sits right below the buttons (see the notes on SyncResult); this button
-          row only shows for non-WebDAV, while the WebDAV one is rendered under its own
-          buttons inside `WebDavForm`. */}
-      {!isWebDav && <SyncResult error={error} notice={notice} />}
+      }
+      {/* The result sits right below the buttons (see the notes on SyncResult). */}
+      <SyncResult error={error} notice={notice} />
 
       <div className="row sync__row">
         <label className="sync__check">
@@ -731,141 +685,6 @@ const CONFLICT_REASON_KEY: Record<PendingConflict['kind'], MessageKey> = {
   pull: 'sync.conflict.pullReason',
 };
 
-// ---------------------------------------------------------------- WebDAV form
-
-interface WebDavFormProps {
-  /** The config being edited in the form (the value of the controlled inputs). */
-  draft: WebDavConfig;
-  /** The identifier of the action currently running; buttons show a busy state when not null. */
-  busy: string | null;
-  /** Whether the three action buttons are disabled (busy, or the config has an error). */
-  disabled: boolean;
-  /** The config error blocking the actions; buttons are disabled when not null. */
-  configError: Msg | null;
-  /** Failure from the last action; goes to the `<SyncResult>` below the buttons (see the notes there). */
-  error?: Msg;
-  /** Success notice from the last action; same slot as `error`. */
-  notice?: Msg;
-  /** A field in the form changed. */
-  onChange(patch: Partial<WebDavConfig>): void;
-  /** Save and test the connection. */
-  onTest(): void;
-  /** Push right away. */
-  onPush(): void;
-  /** Pull from the remote. */
-  onPull(): void;
-}
-
-/**
- * The WebDAV form. It takes up half the panel, so it's a separate component -- left inside
- * `SyncPanel`, that function would have to juggle four things at once: "which provider",
- * "the form", "messages" and "conflicts".
- *
- * The `#dav-*` ids are anchors recognized by the outside (the smoke test, user scripts),
- * don't change them casually.
- */
-function WebDavForm({
-  draft,
-  busy,
-  disabled,
-  configError,
-  error,
-  notice,
-  onChange,
-  onTest,
-  onPush,
-  onPull,
-}: WebDavFormProps) {
-  const { t, tmMarkup } = useLocale();
-  return (
-    <>
-      <div className="mc-field sync__block">
-        <label className="mc-field__label" htmlFor="dav-base">
-          {t('sync.dav.baseUrl')}
-        </label>
-        <input
-          id="dav-base"
-          className="mc-input"
-          type="url"
-          placeholder="https://dav.jianguoyun.com/dav/"
-          value={draft.baseUrl}
-          onChange={(e) => onChange({ baseUrl: e.target.value })}
-        />
-        {/* This sentence has a `<strong>` in the middle, so it's split into three keys built around the tag (see the notes in zh.ts). */}
-        <span className="mc-field__hint">
-          {t('sync.dav.baseUrlHint1')}
-          <strong>{t('sync.dav.baseUrlHintStrong')}</strong>
-          {t('sync.dav.baseUrlHint2')}
-        </span>
-      </div>
-
-      <div className="sync__grid">
-        <div className="mc-field">
-          <label className="mc-field__label" htmlFor="dav-user">
-            {t('sync.dav.username')}
-          </label>
-          <input
-            id="dav-user"
-            className="mc-input"
-            autoComplete="username"
-            value={draft.username}
-            onChange={(e) => onChange({ username: e.target.value })}
-          />
-        </div>
-        <div className="mc-field">
-          <label className="mc-field__label" htmlFor="dav-pass">
-            {t('sync.dav.password')}
-          </label>
-          <input
-            id="dav-pass"
-            className="mc-input"
-            type="password"
-            autoComplete="current-password"
-            value={draft.password}
-            onChange={(e) => onChange({ password: e.target.value })}
-          />
-        </div>
-      </div>
-
-      <div className="mc-field sync__block">
-        <label className="mc-field__label" htmlFor="dav-path">
-          {t('sync.dav.path')}
-        </label>
-        <input
-          id="dav-path"
-          className="mc-input"
-          placeholder={t('sync.dav.pathPlaceholder')}
-          value={draft.path ?? ''}
-          onChange={(e) => onChange({ path: e.target.value })}
-        />
-      </div>
-
-      <p className="panel__body muted sync__warn">{t('sync.dav.plaintextWarning')}</p>
-
-      <div className="row">
-        <button type="button" className="btn btn--accent" disabled={disabled} onClick={onTest}>
-          {busy === 'test' ? t('sync.testBusy') : t('sync.testAndSave')}
-        </button>
-        <button type="button" className="btn" disabled={disabled} onClick={onPush}>
-          {busy === 'push' ? t('sync.pushBusy') : t('sync.push')}
-        </button>
-        <button type="button" className="btn" disabled={disabled} onClick={onPull}>
-          {busy === 'pull' ? t('sync.pullBusy') : t('sync.pull')}
-        </button>
-        {configError && (
-          <span className="muted">
-            <RichText text={tmMarkup(configError)} />
-          </span>
-        )}
-      </div>
-
-      {/* The three buttons in this form are those three actions (the button text is
-          "Save and test connection"), so the result grows here too (see the notes on SyncResult). */}
-      <SyncResult error={error} notice={notice} />
-    </>
-  );
-}
-
 // ---------------------------------------------------------------- Helpers
 
 /**
@@ -903,25 +722,7 @@ function SyncResult({ error, notice }: { error?: Msg; notice?: Msg }) {
 }
 
 /**
- * Form draft: flatten the saved WebDAV config into a shape that always has values (the form
- * can't have undefined).
- *
- * @param settings the current settings
- * @returns a config that can be fed straight to the controlled inputs
- */
-function webdavDraft(settings: SyncSettings): WebDavConfig {
-  const saved = settings.config.webdav as WebDavConfig | undefined;
-  return {
-    enabled: true,
-    baseUrl: saved?.baseUrl ?? '',
-    username: saved?.username ?? '',
-    password: saved?.password ?? '',
-    path: saved?.path ?? '',
-  };
-}
-
-/**
- * Form drafts for the two providers. Ones that were never saved get empty strings --
+ * Form drafts for the OAuth providers. Ones that were never saved get empty strings --
  * controlled inputs can't be undefined.
  *
  * @param settings the current settings

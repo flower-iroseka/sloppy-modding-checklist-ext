@@ -1,4 +1,4 @@
-// M6/M7 smoke: the settings page for the three sync methods, the message plumbing, and an
+// M6/M7 smoke: the settings page for both sync methods, the message plumbing, and an
 // end-to-end push/pull with the local sync folder.
 //
 // No network and no real auth flow: `chrome.identity.launchWebAuthFlow` opens a login window
@@ -123,7 +123,7 @@ const setSettings = (patch) =>
   evaluate(`(async () => {
     const KEY = 'syncSettings';
     const cur = (await chrome.storage.local.get(KEY))[KEY] ?? {};
-    const next = { activeProvider: 'webdav', autoSync: false, pullOnStart: false, strategy: 'newest-wins', ...${JSON.stringify(patch)}, config: { ...(cur.config ?? {}), ...(${JSON.stringify(patch)}.config ?? {}) } };
+    const next = { activeProvider: 'localFolder', autoSync: false, pullOnStart: false, strategy: 'newest-wins', ...${JSON.stringify(patch)}, config: { ...(cur.config ?? {}), ...(${JSON.stringify(patch)}.config ?? {}) } };
     await chrome.storage.local.set({ [KEY]: next });
     return next;
   })()`);
@@ -367,21 +367,21 @@ const options = await evaluate(
   `[...document.querySelectorAll('#provider option')].map((o) => o.value)`,
 );
 check(
-  'the sync method selector lists three providers (fixed order)',
-  JSON.stringify(options) === JSON.stringify(['localFolder', 'webdav', 'dropbox']),
+  'the sync method selector lists both providers (fixed order)',
+  JSON.stringify(options) === JSON.stringify(['localFolder', 'dropbox']),
   JSON.stringify(options),
 );
 // The first item is selected by default, and the first item has to be the one that "needs no signup" -- that's the whole point of §7.7.
 check('coming from a clean state it shows the local sync folder card', await exists('.sync__folder-state'));
-check('and the WebDAV form is not showing', !(await exists('#dav-base')));
+check('and the Dropbox card is not showing', !(await exists('.sync__provider')));
 
 // --- Switch to Dropbox (the first OAuth provider in the catalog) --------------------------------
 await setSelect('#provider', 'dropbox');
 check('switching to Dropbox → its client_id input shows up', await exists('#oauth-dropbox-client'));
-check('the WebDAV form stops showing after the switch', !(await exists('#dav-base')));
+check('the local sync folder card stops showing after the switch', !(await exists('.sync__folder-state')));
 // Google Drive used to be the only one with `requiresSecret` (a "Web application" client
-// forces a secret). It was removed entirely on 2026-09-11, and the two remaining providers
-// are public clients with PKCE, so the secret can always be left blank.
+// forces a secret). It was removed entirely on 2026-09-11, and the one provider left is a
+// public client with PKCE, so the secret can always be left blank.
 check('Dropbox does not force a secret (public client + PKCE)', (await text('label[for="oauth-dropbox-secret"]')).includes('可留空'));
 
 // The redirect URL is the one thing the user has to copy by hand into another console, so it has to actually match.
@@ -575,8 +575,8 @@ check(
   noClient?.text,
 );
 
-const notOAuth = await sync(MSG.connect, { provider: 'webdav' });
-check('starting an OAuth connect against WebDAV → it says that is not an OAuth endpoint', notOAuth?.ok === false && /OAuth/.test(notOAuth.text), notOAuth?.text);
+const notOAuth = await sync(MSG.connect, { provider: 'localFolder' });
+check('starting an OAuth connect against the local sync folder → it says that is not an OAuth endpoint', notOAuth?.ok === false && /OAuth/.test(notOAuth.text), notOAuth?.text);
 
 // Config filled in but no token: that's the real state of "reachable but not authorized yet".
 await putSettings({

@@ -25,19 +25,6 @@ export const en: Catalog = {
   // translate -- they exist so `describeError` has a uniform Msg return type.
   'err.raw': '{detail}',
 
-  // ---------------------------------------------------------------- WebDAV
-  'err.webdav.noBaseUrl': 'Please fill in the WebDAV server address.',
-  'err.webdav.badBaseUrl': 'The server address must be a full https URL, for example https://dav.jianguoyun.com/dav/',
-  'err.webdav.insecureBaseUrl':
-    'The server address must use https. Over http the username and password are sent across the network in the clear; addresses on this machine (127.0.0.1, localhost) are exempt.',
-  'err.webdav.noUsername': 'Please fill in the username.',
-  'err.webdav.noPassword': 'Please fill in the password or app password.',
-  'err.webdav.auth': '{action} failed: {host} rejected authentication (HTTP {status}). Check the username and password.',
-  'err.webdav.notFound': '{action} failed: path not found (HTTP 404). Check the server address and subfolder.',
-  'err.webdav.unsupported': '{action} failed: the server does not support this operation (HTTP {status}).',
-  'err.webdav.server': '{action} failed: server error (HTTP {status}), you can retry later.',
-  'err.webdav.other': '{action} failed: HTTP {status}.',
-
   // ---------------------------------------------------------------- OAuth flow
   'err.oauth.redirectUnparsable': 'Could not parse the authorization callback URL.',
   'err.oauth.stateMismatch': 'The authorization callback had a mismatched state; aborted. Please reconnect.',
@@ -164,12 +151,11 @@ export const en: Catalog = {
   // deliberate: there is only one place to look up a translation.
 
   // ---------------------------------------------------------------- Brands / proper nouns
-  // WebDAV / Dropbox are trademarks and read the same in both -- but they still take a key,
-  // so `displayName` can have the uniform type `MessageKey` and call sites don't have to
+  // Dropbox is a trademark and reads the same in both -- but it still takes a key, so
+  // `displayName` can have the uniform type `MessageKey` and call sites don't have to
   // distinguish "this one is translatable, that one isn't".
   'provider.localFolder': 'Local sync folder (no signup)',
   'provider.localFolderShort': 'Local sync folder',
-  'provider.webdav': 'WebDAV',
   'provider.dropbox': 'Dropbox',
 
   // ---------------------------------------------------------------- Common words
@@ -220,7 +206,6 @@ export const en: Catalog = {
   'sync.providerConnected': ' (connected)',
   'sync.test': 'Test connection',
   'sync.testBusy': 'Testing…',
-  'sync.testAndSave': 'Save and test connection',
   'sync.push': 'Upload now',
   'sync.pushBusy': 'Uploading…',
   'sync.pull': 'Import from remote',
@@ -251,7 +236,6 @@ export const en: Catalog = {
   'sync.stats.disabled': 'Not enabled',
   'sync.stats.lastError': 'Last sync failure: {detail}',
 
-  'sync.err.noHostPermission': "Permission to reach that server was not granted, so the sync request cannot be sent.",
   'sync.err.pickerUnsupported':
     'This browser cannot pick a folder directly (Chrome or Edge 86+ is required).',
   'sync.err.pickCancelled': 'Cancelled: no folder was chosen.',
@@ -269,19 +253,6 @@ export const en: Catalog = {
   'sync.merged':
     'Merged: {added} added, {skipped} duplicates skipped. Click "Upload now" once you are happy with it.',
   'sync.keptLocal': 'Kept the local copy.',
-
-  // WebDAV form
-  'sync.dav.baseUrl': 'Server address',
-  'sync.dav.baseUrlHint1': 'Enter the WebDAV ',
-  'sync.dav.baseUrlHintStrong': 'collection',
-  'sync.dav.baseUrlHint2':
-    ' address (a directory), not a file address. The file name is fixed as modding-checklist.json. For Jianguo Cloud use https://dav.jianguoyun.com/dav/',
-  'sync.dav.username': 'Username',
-  'sync.dav.password': 'Password / app password',
-  'sync.dav.path': 'Subfolder (optional)',
-  'sync.dav.pathPlaceholder': 'e.g. osu-checklist',
-  'sync.dav.plaintextWarning':
-    'The password is stored in plain text in this extension\'s own local storage (chrome.storage.local on this machine). It is never uploaded with a sync and never appears in an exported JSON. Prefer generating a separate app password with your cloud provider over using your main account password.',
 
   // ---------------------------------------------------------------- Local sync folder card
   'folder.label': 'Sync folder',
@@ -302,7 +273,7 @@ export const en: Catalog = {
   'folder.permissionNotice':
     'The browser takes the folder permission back after a while (usually once you close and reopen the browser, or reboot). This is not a failure. Click "Re-authorize" and hit "Allow" in the system dialog.',
   'folder.unsupported':
-    'This browser cannot pick a folder directly (Chrome or Edge 86+ is required). WebDAV or a cloud drive below will sync just as well.',
+    'This browser cannot pick a folder directly (Chrome or Edge 86+ is required). Dropbox will sync just as well.',
   'folder.pick': 'Choose folder',
   'folder.change': 'Change folder',
   'folder.picking': 'Working…',

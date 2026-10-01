@@ -1,5 +1,5 @@
-import { REMOTE_FILE } from '../core/sync/webdav';
 import type { FolderPermission } from '../core/sync/folderHandle';
+import { REMOTE_FILE } from '../core/sync/types';
 import { useLocale } from '../i18n/react';
 
 /**

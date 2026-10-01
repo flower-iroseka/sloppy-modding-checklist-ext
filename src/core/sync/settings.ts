@@ -8,7 +8,6 @@ import type {
   SyncSettings,
   SyncStatus,
   SyncStrategy,
-  WebDavConfig,
 } from './types';
 
 /** The `chrome.storage` key holding the settings. */
@@ -19,8 +18,13 @@ export const SYNC_STATUS_KEY = 'syncStatus';
 /**
  * Same order as `PROVIDER_CATALOG` (that one drives display, this one drives iteration
  * order when persisting).
+ *
+ * This is also what decides which stored configs survive a read: anything not in this list
+ * is dropped by `normalizeSyncSettings`. Anyone who had a provider from an older version
+ * configured gets `activeProvider: null` back, which the settings page shows as "nothing
+ * picked yet".
  */
-export const PROVIDER_IDS: ProviderId[] = ['localFolder', 'webdav', 'dropbox'];
+export const PROVIDER_IDS: ProviderId[] = ['localFolder', 'dropbox'];
 
 /**
  * Display names for the conflict strategies. Keys, not strings -- the same dropdown lives on
@@ -75,24 +79,6 @@ function bool(v: unknown): boolean {
 }
 
 /**
- * Normalize WebDAV config: baseUrl drops its trailing slash (added uniformly when joining
- * the file name), path drops slashes at both ends.
- *
- * @param raw the raw value read from storage
- * @returns the normalized config
- */
-export function normalizeWebDavConfig(raw: unknown): WebDavConfig {
-  const o = (raw ?? {}) as Record<string, unknown>;
-  return {
-    enabled: bool(o.enabled),
-    baseUrl: str(o.baseUrl).trim().replace(/\/+$/, ''),
-    username: str(o.username).trim(),
-    password: str(o.password),
-    path: str(o.path).trim().replace(/^\/+|\/+$/g, ''),
-  };
-}
-
-/**
  * Normalize OAuth config. client_secret has leading/trailing whitespace trimmed but not
  * internal whitespace (it might genuinely contain spaces).
  *
@@ -134,8 +120,7 @@ export function normalizeLocalFolderConfig(raw: unknown): LocalFolderConfig {
  * @returns the normalized config
  */
 function normalizeConfig(id: ProviderId, raw: unknown): ProviderConfig {
-  if (id === 'localFolder') return normalizeLocalFolderConfig(raw);
-  return id === 'webdav' ? normalizeWebDavConfig(raw) : normalizeOAuthConfig(raw);
+  return id === 'localFolder' ? normalizeLocalFolderConfig(raw) : normalizeOAuthConfig(raw);
 }
 
 /**
@@ -162,8 +147,8 @@ function normalizeProviderId(v: unknown): ProviderId | null {
  * Normalize settings. Same idea as `normalizeDoc`: storage might hold an old version or
  * JSON someone edited by hand, so everything is normalized before it enters memory, and
  * "missing field / wrong type" is dealt with in one layer. Unknown fields are dropped (this
- * includes other providers' configs: even when activeProvider is webdav, they have to be
- * read back, otherwise switching provider once would wipe what the others had filled in).
+ * includes the other provider's config: even when activeProvider is localFolder, it has to
+ * be read back, otherwise switching provider once would wipe what the other had filled in).
  *
  * @param raw the raw value read from storage
  * @returns the normalized settings

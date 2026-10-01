@@ -82,7 +82,6 @@ Sync goes two ways. **Upload** writes the local list to the remote; **import** b
 **Only one sync method can be used at a time.** Pick it from the "Sync target" dropdown in Settings:
 
 - **Local sync folder (no signup)** — the default. Install the cloud drive's desktop client first (Dropbox, Nutstore and others all provide one); it mounts a directory in your cloud drive as a local folder on the computer, and you pick that folder in Settings. The extension writes files into the folder and the client handles uploading to the cloud. The client has to be running on the computer, and when things get uploaded is up to it. The browser takes the folder permission back after a while, and Settings will then ask you to click "Re-authorize" once.
-- **WebDAV** — fill in the server address and account details (Nutstore, Nextcloud and others all offer WebDAV). The address must be https; the only exception is this machine (127.0.0.1, localhost), because over http the username and password go across the network in the clear. Clicking "Save and test connection" asks the browser for permission to reach that server.
 - **Dropbox** — you need to register an application in the Dropbox console yourself (there's a step-by-step guide below).
 
 ### Dropbox registration guide
@@ -148,7 +147,7 @@ When the extension asks, Settings shows a conflict panel. An import conflict off
 - **The list** is stored in the browser's `chrome.storage.local`. Manual backups, switching browsers and switching machines all go through export / import in the "Data" panel in Settings — that is a single JSON file.
 - **The Dropbox token** is stored in the same `storage.local`, and **never goes into the exported JSON**. Only the service worker reads it; the pages are told whether a connection exists, not the token itself.
 - **client_id / client_secret** are entered on the Settings page and saved in `storage.local` with the rest of the settings. The service worker uses them to exchange for a token. The Dropbox app used here is a public client, so `client_secret` can be left empty.
-- The extension sends requests to **only** these domains. The WebDAV server address is yours to fill in, so its domain is requested separately the first time you save.
+- The extension sends requests to **only** these domains.
 - There is no telemetry, and nothing else receives your data: the author has no server.
 
 ```

@@ -3,6 +3,7 @@ import { autoPull } from '../src/background/sync';
 import { createEmptyDoc } from '../src/core/doc';
 import { flushPersist } from '../src/core/persist';
 import { SYNC_SETTINGS_KEY, SYNC_STATUS_KEY } from '../src/core/sync/settings';
+import { SYNC_TOKENS_KEY } from '../src/core/sync/tokens';
 import { checklistStore } from '../src/core/store';
 import { createMemoryStorage, resetStore, type MemoryStorage } from './helpers';
 
@@ -18,18 +19,31 @@ import { createMemoryStorage, resetStore, type MemoryStorage } from './helpers';
  * had no unit test at all; the smoke script only exercises the timed paths end to end.
  */
 
-/** Settings that pass `validateConfig`, so the only thing that can stop a run is the guard. */
+/**
+ * Settings for the one provider that goes to the network, fully filled in, so the only thing
+ * that can stop a run is the guard.
+ *
+ * It has to be Dropbox: the premise of both assertions below is that a run which gets past
+ * the guard really does reach `fetch`, and the local sync folder never sends a request at
+ * all, which would make them pass whether or not the guard existed.
+ */
 const SETTINGS = {
-  activeProvider: 'webdav',
+  activeProvider: 'dropbox',
   autoSync: true,
   config: {
-    webdav: {
-      enabled: true,
-      baseUrl: 'https://dav.example.com/dav/',
-      username: 'u',
-      password: 'p',
-    },
+    dropbox: { enabled: true, clientId: 'cid-test' },
   },
+};
+
+/**
+ * An unexpired Dropbox token, so `accessToken` hands it straight back.
+ *
+ * Without this the read would look for a token, find none, and throw before reaching the
+ * network -- the same "stops early" outcome the guard produces, which is exactly what the
+ * positive control below has to rule out.
+ */
+const TOKENS = {
+  dropbox: { accessToken: 'at-test', expiresAt: Date.now() + 3_600_000 },
 };
 
 /**
@@ -55,6 +69,7 @@ async function seedLocalDoc(storage: MemoryStorage): Promise<MemoryStorage> {
 async function storageWithConflict(): Promise<MemoryStorage> {
   const storage = createMemoryStorage({
     [SYNC_SETTINGS_KEY]: SETTINGS,
+    [SYNC_TOKENS_KEY]: TOKENS,
     [SYNC_STATUS_KEY]: {
       lastSyncAt: 1_000,
       pendingConflict: {
@@ -94,6 +109,7 @@ describe('autoPull with a conflict the user has not answered', () => {
     await seedLocalDoc(
       createMemoryStorage({
         [SYNC_SETTINGS_KEY]: SETTINGS,
+        [SYNC_TOKENS_KEY]: TOKENS,
         [SYNC_STATUS_KEY]: { lastSyncAt: 1_000 },
       }),
     );

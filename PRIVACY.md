@@ -11,7 +11,7 @@ Sloppy Modding Checklist is a browser extension that keeps a modding checklist o
 The following lives in the browser's `chrome.storage.local` and exists only on this device:
 
 - **The checklist itself**: entry text, notes, links, difficulty, and for each entry the discussion link and author name it came from.
-- **Sync settings**: the sync method that was chosen and its configuration, including the WebDAV server address, username and password, and the Dropbox app's client_id and client_secret.
+- **Sync settings**: the sync method that was chosen and its configuration, including the Dropbox app's client_id and client_secret.
 - **The Dropbox access token and refresh token.**
 - **A device id and the sync status**: a randomly generated device identifier, plus the time and result of the last sync.
 
@@ -24,7 +24,7 @@ The export button in Settings produces a JSON file of the checklist. It does **n
 The extension talks to these addresses, and no others:
 
 - **osu.ppy.sh** — to read a discussion permalink the user entered and fetch the author of that post. The request carries the browser's existing osu! session (`credentials: 'include'`) and reads a publicly visible page.
-- **The server of the sync method that was chosen** — the Dropbox API, or a WebDAV server the user typed in. What is sent is the checklist's JSON file. WebDAV sends the username and password as HTTP Basic authentication, so the extension requires that address to use https; only addresses on this machine (127.0.0.1, localhost) may use http.
+- **The server of the sync method that was chosen** — the Dropbox API. What is sent is the checklist's JSON file.
 - **The local sync folder sends no network request at all**: the extension only writes a file into the folder the user picked, and the user's own cloud client does the uploading.
 
 There are no other recipients.

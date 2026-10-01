@@ -11,14 +11,13 @@
 import type { MessageKey } from '../../i18n';
 import { SyncError } from './errors';
 import type { DirHandleLike, FolderPermission } from './folderHandle';
-import { REMOTE_FILE } from './webdav';
-import type { LocalFolderConfig, ProviderConfig, SyncProvider } from './types';
+import { REMOTE_FILE, type LocalFolderConfig, type ProviderConfig, type SyncProvider } from './types';
 
 /**
  * The sync file's name.
  *
- * Kept consistent with the WebDAV / cloud drive side -- the user sees the same name when
- * switching between methods, so manual backups, comparisons and moves need no thought.
+ * The same one Dropbox sync uses -- the user sees the same name whichever method is active,
+ * so manual backups, comparisons and moves need no thought.
  */
 const FILE_NAME = REMOTE_FILE;
 

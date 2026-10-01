@@ -10,8 +10,8 @@
  */
 import { fetchWithTimeout } from './http';
 import { apiError, errorDetail, type OAuthApi } from './oauthProvider';
-import { REMOTE_FILE } from './webdav';
 import type { OAuthSpec } from './oauth';
+import { REMOTE_FILE } from './types';
 
 export const DROPBOX_SPEC: OAuthSpec = {
   id: 'dropbox',

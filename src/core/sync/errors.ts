@@ -38,7 +38,7 @@ export class SyncError extends Error {
   constructor(msg: Msg, opts: { status?: number; retryable?: boolean; cause?: unknown } = {}) {
     // `Error.message` is only for logs and stack traces, so it's pre-rendered in the base
     // language (Chinese) to keep devtools from showing nothing but a key like
-    // `err.webdav.notFound`. Don't use it as UI text: after the user switches to English it
+    // `err.dropbox.notFound`. Don't use it as UI text: after the user switches to English it
     // stays Chinese. Display always goes through `describeError` → the renderer (the page
     // uses `useLocale().tm`, the SW only returns the structure).
     super(renderMsg(msg, 'zh'));

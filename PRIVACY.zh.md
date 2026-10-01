@@ -11,7 +11,7 @@ Sloppy Modding Checklist 是一款在 osu! beatmap discussion 页面上维护 mo
 以下内容保存在浏览器的 `chrome.storage.local` 中，只存在于当前设备上：
 
 - **清单内容**：条目正文、备注、链接、难度，以及每条记录对应的讨论链接与作者名。
-- **同步设置**：所选的同步方式及其配置，其中包含 WebDAV 的服务器地址、账号和密码，以及 Dropbox 应用的 client_id 与 client_secret。
+- **同步设置**：所选的同步方式及其配置，其中包含 Dropbox 应用的 client_id 与 client_secret。
 - **Dropbox 的访问令牌与刷新令牌**。
 - **设备标识与同步状态**：一个随机生成的设备标识、最近一次同步的时间与结果。
 
@@ -24,7 +24,7 @@ Sloppy Modding Checklist 是一款在 osu! beatmap discussion 页面上维护 mo
 扩展只与下列地址通信：
 
 - **osu.ppy.sh** —— 用于读取用户填写的讨论永久链接，取回该条帖子的作者名。该请求会带上浏览器中已有的 osu! 登录凭据（`credentials: 'include'`），读取的是公开可见的页面。
-- **所选同步方式的服务器** —— Dropbox 的接口，或用户自行填写的 WebDAV 服务器。发送的内容是清单的 JSON 文件。WebDAV 的账号密码以 HTTP Basic 认证的形式发往用户填写的服务器，因此扩展要求该地址使用 https，只有本机地址（127.0.0.1、localhost）允许使用 http。
+- **所选同步方式的服务器** —— Dropbox 的接口。发送的内容是清单的 JSON 文件。
 - **本地同步文件夹方式不发送任何网络请求**：扩展只往用户选中的文件夹里写文件，上传到云端由用户自己的网盘客户端完成。
 
 除上述之外没有其他接收方。

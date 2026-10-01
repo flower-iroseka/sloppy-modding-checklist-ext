@@ -58,12 +58,6 @@ describe('manifest.json', () => {
   // "Read and change all your data on all websites" line at install time scares people off.
   it('every provider that goes online declares its domains, every one that does not has none', () => {
     for (const desc of PROVIDER_CATALOG) {
-      if (desc.id === 'webdav') {
-        // The WebDAV address is filled in by the user, so the domain is only known at
-        // runtime -- see the optional_host_permissions in §7.5.
-        expect(desc.origins).toBeUndefined();
-        continue;
-      }
       if (desc.id === 'localFolder') {
         // The local sync folder sends no requests at all: once the file is written it's
         // handed off to the cloud drive client (§7.7).
@@ -80,17 +74,14 @@ describe('manifest.json', () => {
     }
   });
 
-  // This is what WebDAV's on-demand permission request relies on; delete it and that path fails silently.
-  it('optional_host_permissions is there (for WebDAV to request at runtime)', () => {
-    expect(manifest.optional_host_permissions).toContain('https://*/*');
-  });
-
-  // `validateConfig` refuses plain http to anything but loopback (Basic auth in the clear),
-  // so the broad `http://*/*` went away with it. Every http form that is still accepted needs
-  // a pattern here, or the permission request would come back empty-handed.
-  it('the only http patterns left are loopback', () => {
-    const http = (manifest.optional_host_permissions ?? []).filter((p) => p.startsWith('http://'));
-    expect(http).toEqual(['http://127.0.0.1/*', 'http://localhost/*']);
+  // A provider whose address is typed in by the user needs this: the host is only known at
+  // runtime, so it can't go in the static list. Nothing left in the catalog works that way --
+  // both remaining options have fixed hosts, and one of them sends no request at all. Leaving
+  // the declaration behind would keep "read and change all your data on all websites" in the
+  // install prompt for a capability nothing exercises. Same failure mode as an unclaimed host
+  // permission: silent, and only visible when something is deleted.
+  it('no optional host permissions are declared', () => {
+    expect(manifest.optional_host_permissions ?? []).toEqual([]);
   });
 
   it('the identity permission is there (needed by launchWebAuthFlow)', () => {

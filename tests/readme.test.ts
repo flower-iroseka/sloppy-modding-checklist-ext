@@ -136,6 +136,8 @@ for (const readme of READMES) {
         'onedrive',
         'sharepoint',
         'Azure',
+        'WebDAV',
+        'webdav',
       ];
 
       it.each(REMOVED)('the README does not contain "%s"', (word) => {

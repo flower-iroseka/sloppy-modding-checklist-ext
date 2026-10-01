@@ -2,15 +2,15 @@
  * The HTTP layer shared by all providers (CODING_PLAN §7.6).
  *
  * It only handles two things: timeouts, and turning network-layer failures into plain
- * language. HTTP status codes are deliberately not translated here -- the same 404 means
- * "you got the subdirectory wrong" for WebDAV but might mean "the file hasn't been created
- * yet" elsewhere, and the next step differs, so each caller translates its own.
+ * language. HTTP status codes are deliberately not translated here -- the same 404 might
+ * mean "the path is wrong" to one caller and "the file hasn't been created yet" to another,
+ * and the next step differs, so each caller translates its own.
  */
 import { SyncError } from './errors';
 
 /**
- * Self-hosted WebDAV and cloud drives can both hang without responding; without a timeout,
- * "Test connection" would spin forever.
+ * A cloud drive can hang without responding; without a timeout, "Test connection" would spin
+ * forever.
  */
 export const TIMEOUT_MS = 20_000;
 

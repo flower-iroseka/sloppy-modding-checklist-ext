@@ -4,7 +4,6 @@ import {
   normalizeLocalFolderConfig,
   normalizeSyncSettings,
   normalizeSyncStatus,
-  normalizeWebDavConfig,
   readSyncSettings,
   writeSyncSettings,
 } from '../src/core/sync/settings';
@@ -18,37 +17,6 @@ import { resetStore } from './helpers';
  * older version wrote -- and it has to keep another provider's filled-in credentials,
  * rather than wipe them because the user switched away once.
  */
-
-describe('normalizeWebDavConfig', () => {
-  it('baseUrl loses its trailing slash (added once when building the file name, never stored twice)', () => {
-    expect(normalizeWebDavConfig({ baseUrl: 'https://dav.example.com/dav///' }).baseUrl).toBe(
-      'https://dav.example.com/dav',
-    );
-  });
-
-  it('path loses the slashes at both ends', () => {
-    expect(normalizeWebDavConfig({ path: '/osu/' }).path).toBe('osu');
-    expect(normalizeWebDavConfig({ path: '   ' }).path).toBe('');
-  });
-
-  it('whitespace in the password must be kept as-is (trimming it would break the login)', () => {
-    expect(normalizeWebDavConfig({ password: ' ab cd ' }).password).toBe(' ab cd ');
-  });
-
-  it('username is trimmed, and a missing field is an empty string rather than undefined', () => {
-    const cfg = normalizeWebDavConfig({ username: '  me  ' });
-    expect(cfg.username).toBe('me');
-    expect(cfg.password).toBe('');
-    expect(cfg.baseUrl).toBe('');
-    expect(cfg.enabled).toBe(false);
-  });
-
-  it('garbage input does not throw', () => {
-    expect(normalizeWebDavConfig(null).baseUrl).toBe('');
-    expect(normalizeWebDavConfig('nope').username).toBe('');
-    expect(normalizeWebDavConfig(42).password).toBe('');
-  });
-});
 
 describe('normalizeLocalFolderConfig', () => {
   // The handle lives in IndexedDB and the config only holds the name -- so there's very
@@ -76,16 +44,16 @@ describe('normalizeLocalFolderConfig', () => {
     expect(normalizeLocalFolderConfig(42).enabled).toBe(false);
   });
 
-  it('it does not interfere with other providers configs (switching provider does not wipe the folder name)', () => {
+  it('it does not interfere with the other provider config (switching provider does not wipe the folder name)', () => {
     const s = normalizeSyncSettings({
-      activeProvider: 'webdav',
+      activeProvider: 'dropbox',
       config: {
         localFolder: { enabled: true, folderName: 'My Drive' },
-        webdav: { enabled: true, baseUrl: 'https://a.com/dav', username: 'u', password: 'p' },
+        dropbox: { enabled: true, clientId: 'cid-123' },
       },
     });
     expect((s.config.localFolder as { folderName?: string }).folderName).toBe('My Drive');
-    expect((s.config.webdav as { username: string }).username).toBe('u');
+    expect((s.config.dropbox as { clientId: string }).clientId).toBe('cid-123');
   });
 });
 
@@ -103,24 +71,26 @@ describe('normalizeSyncSettings', () => {
     expect(normalizeSyncSettings({ strategy: 'mine-wins' }).strategy).toBe('newest-wins');
   });
 
-  // Deliberate: wiping another provider's filled-in clientId / password just because the
-  // user switched providers once would drive them crazy.
+  // Deliberate: wiping another provider's filled-in clientId just because the user switched
+  // providers once would drive them crazy.
   it('a non-active provider config is kept too', () => {
     const s = normalizeSyncSettings({
-      activeProvider: 'webdav',
+      activeProvider: 'localFolder',
       config: {
-        webdav: { enabled: true, baseUrl: 'https://a.com/dav', username: 'u', password: 'p' },
+        localFolder: { enabled: true, folderName: 'My Drive' },
         dropbox: { enabled: true, clientId: 'cid-123' },
       },
     });
-    expect(s.activeProvider).toBe('webdav');
+    expect(s.activeProvider).toBe('localFolder');
     expect((s.config.dropbox as { clientId: string }).clientId).toBe('cid-123');
   });
 
-  // Google Drive was cut entirely on 2026-09-11. Old profiles may still hold its config
-  // and `activeProvider: 'googleDrive'` -- on read, the former is dropped and the latter
-  // falls back to null (the page then lands on the first item in the catalog). It must not
-  // throw: not being able to open the settings page after one upgrade is the worst outcome.
+  // Google Drive was cut entirely on 2026-09-11, WebDAV on 2026-10-02. Old profiles may
+  // still hold those configs and that `activeProvider` -- on read, the config is dropped and
+  // the id falls back to null (the page then lands on the first item in the catalog). It
+  // must not throw: not being able to open the settings page after one upgrade is the worst
+  // outcome. WebDAV is the interesting one of the two, because its config carries a password
+  // that has to be gone from what the page reads back, not merely unrendered.
   it('a removed provider config is dropped, activeProvider falls back to null', () => {
     const s = normalizeSyncSettings({
       activeProvider: 'googleDrive',
@@ -130,9 +100,22 @@ describe('normalizeSyncSettings', () => {
     expect(s.config).toEqual({});
   });
 
+  it('a stored WebDAV config is dropped, password and all', () => {
+    const s = normalizeSyncSettings({
+      activeProvider: 'webdav',
+      config: {
+        webdav: { enabled: true, baseUrl: 'https://dav.example.com/dav', username: 'u', password: 'hunter2' },
+        localFolder: { enabled: true, folderName: 'My Drive' },
+      },
+    });
+    expect(s.activeProvider).toBeNull();
+    expect(Object.keys(s.config)).toEqual(['localFolder']);
+    expect(JSON.stringify(s)).not.toContain('hunter2');
+  });
+
   it('a provider never configured leaves no empty shell in config', () => {
-    const s = normalizeSyncSettings({ config: { webdav: { baseUrl: 'https://a.com' } } });
-    expect(Object.keys(s.config)).toEqual(['webdav']);
+    const s = normalizeSyncSettings({ config: { dropbox: { clientId: 'cid-123' } } });
+    expect(Object.keys(s.config)).toEqual(['dropbox']);
   });
 
   it('boolean fields only accept a real true', () => {
@@ -191,20 +174,22 @@ describe('syncSettings read / write', () => {
     expect(await readSyncSettings()).toEqual(defaultSyncSettings());
   });
 
-  it('writing then reading back gives the same thing (normalization included)', async () => {
+  it('writing then reading back gives the same thing, with normalization applied on the way out', async () => {
     await writeSyncSettings({
       ...defaultSyncSettings(),
-      activeProvider: 'webdav',
+      activeProvider: 'dropbox',
       autoSync: true,
       strategy: 'ask',
       config: {
-        webdav: { enabled: true, baseUrl: 'https://a.com/dav/', username: 'u', password: 'p' },
+        // Written with the padding still on it, so the read below proves normalization ran
+        // rather than just handing back what was stored.
+        dropbox: { enabled: true, clientId: '  cid-123  ' },
       },
     });
     const back = await readSyncSettings();
-    expect(back.activeProvider).toBe('webdav');
+    expect(back.activeProvider).toBe('dropbox');
     expect(back.autoSync).toBe(true);
     expect(back.strategy).toBe('ask');
-    expect((back.config.webdav as { baseUrl: string }).baseUrl).toBe('https://a.com/dav');
+    expect((back.config.dropbox as { clientId: string }).clientId).toBe('cid-123');
   });
 });

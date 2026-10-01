@@ -2,48 +2,37 @@
  * The sync layer's data model (CODING_PLAN §7.1).
  *
  * A provider doesn't touch storage or the store, it only knows "a JSON string": what's read
- * from the remote and what's about to be uploaded are both just text to it. That keeps
- * WebDAV's offline/401/missing-path concerns separate from the "which copy wins" conflict
+ * from the remote and what's about to be uploaded are both just text to it. That keeps a
+ * provider's offline/401/missing-file concerns separate from the "which copy wins" conflict
  * logic, so each can be unit-tested on its own.
  */
 import type { MessageKey, Msg } from '../../i18n';
 
-/** The three sync methods currently implemented. */
-export type ProviderId = 'localFolder' | 'webdav' | 'dropbox';
+/**
+ * The fixed name of the file the checklist is written to, on every sync target.
+ *
+ * It lives here rather than in a provider because more than one provider needs it, and
+ * because changing it means changing the data file, so it shouldn't be decided in passing.
+ */
+export const REMOTE_FILE = 'modding-checklist.json';
 
-/** The part all three provider configs share. */
+/** The two sync methods currently implemented. */
+export type ProviderId = 'localFolder' | 'dropbox';
+
+/** The part both provider configs share. */
 export interface ProviderConfigBase {
   /** Whether the user turned it on in the settings page. Nothing syncs when it's off. */
   enabled: boolean;
 }
 
-/** WebDAV: manually entered server address + basic auth. */
-export interface WebDavConfig extends ProviderConfigBase {
-  /**
-   * Collection URL, e.g. `https://dav.jianguoyun.com/dav/`; the file name is fixed, see
-   * REMOTE_FILE.
-   */
-  baseUrl: string;
-  /** basic auth username. */
-  username: string;
-  /** basic auth password. */
-  password: string;
-  /**
-   * Subdirectory under the collection (can be empty). Trailing slashes are optional and
-   * normalized.
-   */
-  path?: string;
-}
-
 /**
- * The two OAuth providers (M6): the user enters the client_id they registered in each
- * provider's console.
+ * The OAuth provider (M6): the user enters the client_id they registered in the provider's
+ * console.
  *
- * The flow is authorization code + PKCE, so client_secret isn't required -- Microsoft's and
- * Dropbox's public clients shouldn't have one at all, and filling one in just adds another
- * surface to leak. The field stays because it's a property of the client type (only
- * confidential clients require it), decided per provider by `OAuthSpec.requiresSecret`, and
- * both are currently false.
+ * The flow is authorization code + PKCE, so client_secret isn't required -- Dropbox's public
+ * clients shouldn't have one at all, and filling one in just adds another surface to leak.
+ * The field stays because it's a property of the client type (only confidential clients
+ * require it), decided per provider by `OAuthSpec.requiresSecret`, which is currently false.
  *
  * The token isn't here: that's runtime data, stored under another key (`syncTokens`), read
  * and written only by the service worker (§7.6). This config does end up in exported
@@ -69,18 +58,16 @@ export interface OAuthConfig extends ProviderConfigBase {
  * show "which folder is currently connected" on the settings page, and to give a sensible
  * error when there's no handle.
  *
- * And precisely because it holds no credentials, it's the only one of the providers that
- * needs no host permission, no developer console, and no app registration (the other one
- * needing no host permission is WebDAV, but that still requires the user to have a WebDAV-
- * capable cloud drive account).
+ * And precisely because it holds no credentials, it's the only provider that needs no host
+ * permission, no developer console and no app registration.
  */
 export interface LocalFolderConfig extends ProviderConfigBase {
   /** For display; the handle that actually does the work is in IndexedDB. */
   folderName?: string;
 }
 
-/** The union of the three provider configs. */
-export type ProviderConfig = LocalFolderConfig | WebDavConfig | OAuthConfig;
+/** The union of the two provider configs. */
+export type ProviderConfig = LocalFolderConfig | OAuthConfig;
 
 /** What's read from the remote. */
 export interface RemoteDoc {
@@ -106,9 +93,9 @@ export interface SyncProvider {
    * It gets dropped into sentences like `err.bg.notConfigured` as the `{provider}` param, and
    * those sentences have to follow the UI language. Storing a pre-rendered Chinese name
    * would give you "Local sync folder is not fully configured yet" with a Chinese name
-   * wedged in after switching to English. Brand names (WebDAV / Dropbox) each take a key
-   * too, with the same value in both catalogs, so call sites don't have to branch on "this
-   * one translates, that one doesn't".
+   * wedged in after switching to English. Brand names (Dropbox) take a key too, with the
+   * same value in both catalogs, so call sites don't have to branch on "this one translates,
+   * that one doesn't".
    */
   displayName: MessageKey;
   /**

@@ -11,7 +11,7 @@ import type { PendingConflict, ProviderConfig, RemoteDoc, SyncProvider, SyncStra
  * sides.
  *
  * Every side effect comes in through `SyncDeps`, so a unit test can plug in a fake provider
- * and run upload, pull, conflict and backup end to end without a WebDAV server.
+ * and run upload, pull, conflict and backup end to end without a server.
  */
 
 /**

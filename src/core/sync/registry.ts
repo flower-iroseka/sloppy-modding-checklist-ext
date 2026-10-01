@@ -3,7 +3,6 @@ import { DROPBOX_ORIGINS, DROPBOX_SPEC, dropboxApi } from './dropbox';
 import type { AuthFlowDeps, OAuthSpec } from './oauth';
 import { createOAuthProvider, type OAuthApi, type OAuthProviderDeps } from './oauthProvider';
 import { createLocalFolderProvider, type LocalFolderDeps } from './localFolder';
-import { createWebDavProvider } from './webdav';
 import type { ProviderId, SyncProvider } from './types';
 
 /**
@@ -20,12 +19,11 @@ export interface ProviderDescriptor {
    * The dropdown entry. A key, not a string -- same reasoning as `SyncProvider.displayName`.
    */
   labelKey: MessageKey;
-  /** Only OAuth providers have it; WebDAV is a user-entered address + basic auth. */
+  /** Only OAuth providers have it. */
   oauth?: OAuthSpec;
   /**
-   * Domains network requests will hit. Neither WebDAV nor localFolder has any -- the
-   * former's domain comes from the address the user entered (§7.5), and the latter doesn't
-   * send a single request (§7.7).
+   * Domains network requests will hit. localFolder has none -- it doesn't send a single
+   * request (§7.7).
    */
   origins?: string[];
 }
@@ -47,7 +45,6 @@ export interface ProviderDescriptor {
  */
 export const PROVIDER_CATALOG: ProviderDescriptor[] = [
   { id: 'localFolder', labelKey: 'provider.localFolder' },
-  { id: 'webdav', labelKey: 'provider.webdav' },
   { id: 'dropbox', labelKey: 'provider.dropbox', oauth: DROPBOX_SPEC, origins: DROPBOX_ORIGINS },
 ];
 
@@ -108,7 +105,7 @@ export function allOrigins(): string[] {
 /** All the dependencies to inject when assembling providers. */
 export interface ProviderDeps extends OAuthProviderDeps, AuthFlowDeps {
   /**
-   * Local sync folder handle storage (§7.7). Only it needs this -- the other two don't
+   * Local sync folder handle storage (§7.7). Only it needs this -- the other one doesn't
    * touch the filesystem.
    */
   folder: LocalFolderDeps;
@@ -123,8 +120,7 @@ const OAUTH_APIS: Partial<Record<ProviderId, OAuthApi>> = {
 };
 
 /**
- * Assemble the table of usable providers. WebDAV's `origins` is empty -- its domain is only
- * known at runtime.
+ * Assemble the table of usable providers.
  *
  * @param deps the dependencies for assembling
  * @returns each provider; unimplemented ones have no key
@@ -132,7 +128,6 @@ const OAUTH_APIS: Partial<Record<ProviderId, OAuthApi>> = {
 export function createProviders(deps: ProviderDeps): Partial<Record<ProviderId, SyncProvider>> {
   const out: Partial<Record<ProviderId, SyncProvider>> = {
     localFolder: createLocalFolderProvider(deps.folder),
-    webdav: createWebDavProvider(deps),
   };
   for (const desc of PROVIDER_CATALOG) {
     const api = OAUTH_APIS[desc.id];

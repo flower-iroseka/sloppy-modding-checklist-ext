@@ -6,7 +6,7 @@
  * missing translation shows up in `tsc`, not in front of a user.
  *
  * A value is a sentence, not a place for logic: `{name}` params have to match what the call
- * site passes, and brand names (Dropbox, WebDAV, osu!) always come in as params. Plurals are
+ * site passes, and brand names (Dropbox, osu!) always come in as params. Plurals are
  * dodged with wording for now; when a language really needs them, the rules go in one place,
  * the value type of `Catalog`.
  */
@@ -28,24 +28,6 @@ export const zh = {
   // type, so it gets a slot that outputs them as-is -- and if a prefix is ever wanted for
   // this kind of text, there is only one place to change.
   'err.raw': '{detail}',
-
-  // ---------------------------------------------------------------- WebDAV
-  // Form validation: these four do not fit the "{action}失败" templates in `err.webdav.*` --
-  // nothing has even connected to the server yet, so it is not a "failure", it is "not
-  // filled in completely".
-  'err.webdav.noBaseUrl': '请填写 WebDAV 服务器地址。',
-  'err.webdav.badBaseUrl': '服务器地址要是完整的 https URL，例如 https://dav.jianguoyun.com/dav/',
-  'err.webdav.insecureBaseUrl':
-    '服务器地址要用 https。用 http 的话，账号和密码会明文发到网络上；本机地址（127.0.0.1、localhost）不受此限。',
-  'err.webdav.noUsername': '请填写账号。',
-  'err.webdav.noPassword': '请填写密码或应用密码。',
-
-  // One template × three actions (test connection / upload / download), so the action word is a param.
-  'err.webdav.auth': '{action}失败：{host} 拒绝了认证（HTTP {status}），请检查账号与密码。',
-  'err.webdav.notFound': '{action}失败：路径不存在（HTTP 404），请检查服务器地址与子目录。',
-  'err.webdav.unsupported': '{action}失败：服务器不支持该操作（HTTP {status}）。',
-  'err.webdav.server': '{action}失败：服务器错误（HTTP {status}），稍后可重试。',
-  'err.webdav.other': '{action}失败：HTTP {status}。',
 
   // ---------------------------------------------------------------- OAuth flow
   'err.oauth.redirectUnparsable': '授权回调地址无法解析。',
@@ -184,15 +166,14 @@ export const zh = {
 
   // ---------------------------------------------------------------- Brands / proper nouns
   // Provider names go in the catalog too: they get interpolated into all sorts of sentences
-  // as `{provider}`, and "本地同步文件夹" has to be "Local sync folder" in English. WebDAV /
-  // Dropbox are trademarks and read the same in both, but they still take a key -- that way
+  // as `{provider}`, and "本地同步文件夹" has to be "Local sync folder" in English. Dropbox
+  // is a trademark and reads the same in both, but it still takes a key -- that way
   // `displayName` can have the uniform type `MessageKey` and call sites don't have to
   // distinguish "this one is translatable, that one isn't".
   'provider.localFolder': '本地同步文件夹（免注册）',
   // The short name used inside sentences (the "（免注册）" in the dropdown is a selling
   // point, but stuffing it into a sentence is wordy)
   'provider.localFolderShort': '本地同步文件夹',
-  'provider.webdav': 'WebDAV',
   'provider.dropbox': 'Dropbox',
 
   // ---------------------------------------------------------------- Common words
@@ -252,7 +233,6 @@ export const zh = {
   'sync.providerConnected': '（已连接）',
   'sync.test': '测试连接',
   'sync.testBusy': '测试中…',
-  'sync.testAndSave': '保存并测试连接',
   'sync.push': '立即上传',
   'sync.pushBusy': '上传中…',
   'sync.pull': '从远端导入',
@@ -286,7 +266,6 @@ export const zh = {
   'sync.stats.disabled': '未启用',
   'sync.stats.lastError': '最近一次同步失败：{detail}',
 
-  'sync.err.noHostPermission': '没有获得访问该服务器的权限，无法发送同步请求。',
   'sync.err.pickerUnsupported': '这个浏览器不支持直接选择文件夹（需要 Chrome 或 Edge 86 以上）。',
   'sync.err.pickCancelled': '已取消：没有选择文件夹。',
   'sync.err.handleLost': '记不起之前选的文件夹了，请重新选择一次。',
@@ -302,27 +281,12 @@ export const zh = {
   'sync.merged': '已合并：新增 {added}，跳过重复 {skipped}。确认无误后再点「立即上传」。',
   'sync.keptLocal': '已保留本地内容。',
 
-  // WebDAV form
-  'sync.dav.baseUrl': '服务器地址',
-  // This sentence has a `<strong>集合</strong>` in the middle. The standard i18n practice is
-  // to split around the markup; putting a whole sentence with HTML in the catalog means a
-  // translator can break the tags without noticing.
-  'sync.dav.baseUrlHint1': '填 WebDAV 的',
-  'sync.dav.baseUrlHintStrong': '集合',
-  'sync.dav.baseUrlHint2':
-    '地址（目录），不是文件地址。文件名固定为 modding-checklist.json。坚果云填 https://dav.jianguoyun.com/dav/',
-  'sync.dav.username': '账号',
-  'sync.dav.password': '密码 / 应用密码',
-  'sync.dav.path': '子目录（可留空）',
-  'sync.dav.pathPlaceholder': '例如 osu-checklist',
-  'sync.dav.plaintextWarning':
-    '密码以明文存在扩展自己的本地存储里（本机 chrome.storage.local），不会随同步上传、也不会进导出的 JSON。建议在网盘那边单独生成一个应用密码，别用主账号密码。',
-
   // ---------------------------------------------------------------- Local sync folder card
   'folder.label': '同步文件夹',
-  // Same as `sync.dav.baseUrlHint`: split around `<strong>`. This paragraph has two markers
-  // in it, so it is cut into five segments -- a few extra cuts cost far less than making a
-  // translator count whether a pair of tags balances.
+  // The paragraph below has two `<strong>` markers in it, so it is cut into five segments.
+  // The standard i18n practice is to split around markup; putting a whole sentence with HTML
+  // in the catalog means a translator can break the tags without noticing, and a few extra
+  // cuts cost far less than making someone count whether a pair of tags balances.
   'folder.intro1': '用 Google Drive、OneDrive、Dropbox 等',
   'folder.introStrong1': '桌面客户端',
   'folder.intro2':
@@ -340,7 +304,7 @@ export const zh = {
   // so it can mention that there are other routes; that error only appears after the user
   // clicks the button, so it has to be short.
   'folder.unsupported':
-    '这个浏览器不支持直接选择文件夹（需要 Chrome 或 Edge 86 以上）。换用下面的 WebDAV 或网盘方式同样可以同步。',
+    '这个浏览器不支持直接选择文件夹（需要 Chrome 或 Edge 86 以上）。换用 Dropbox 同样可以同步。',
   'folder.pick': '选择文件夹',
   'folder.change': '换个文件夹',
   'folder.picking': '处理中…',

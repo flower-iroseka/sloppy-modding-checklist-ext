@@ -37,6 +37,5 @@
     "https://www.dropbox.com/*",
     "https://api.dropboxapi.com/*",
     "https://content.dropboxapi.com/*"
-  ],
-  "optional_host_permissions": ["https://*/*", "http://127.0.0.1/*", "http://localhost/*"]
+  ]
 }

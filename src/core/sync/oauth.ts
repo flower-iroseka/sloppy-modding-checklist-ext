@@ -56,7 +56,7 @@ export interface OAuthHelp {
   consoleUrl: string;
   /**
    * What that console is called. A brand name, so it doesn't go in the catalog (hard-coded
-   * like Dropbox / WebDAV) -- Chinese users see "Dropbox App Console" too.
+   * like Dropbox) -- Chinese users see "Dropbox App Console" too.
    */
   consoleLabel: string;
   /**

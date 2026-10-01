@@ -75,11 +75,11 @@ describe('catalog completeness', () => {
 
 describe('rendering', () => {
   it('picks the catalog sentence for the language', () => {
-    expect(renderKey('err.webdav.notFound', { action: zh['action.test'] }, 'zh')).toBe(
-      '测试连接失败：路径不存在（HTTP 404），请检查服务器地址与子目录。',
+    expect(renderKey('err.api.notConnected', { provider: zh['provider.dropbox'] }, 'zh')).toBe(
+      'Dropbox 还没有连接，请先在设置页点「连接」。',
     );
-    expect(renderKey('err.webdav.notFound', { action: en['action.test'] }, 'en')).toBe(
-      'Connection test failed: path not found (HTTP 404). Check the server address and subfolder.',
+    expect(renderKey('err.api.notConnected', { provider: en['provider.dropbox'] }, 'en')).toBe(
+      'Dropbox is not connected yet. Click "Connect" in Settings first.',
     );
   });
 

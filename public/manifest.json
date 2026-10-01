@@ -1,9 +1,10 @@
 {
   "manifest_version": 3,
   "name": "Sloppy Modding Checklist",
-  "short_name": "Sloppy Checklist",
+  "short_name": "SloppyCheck",
   "description": "Maintain a modding checklist on osu! beatmap discussions: four cells, each entry tagged by the difficulty it applies to.",
   "version": "0.1.0",
+  "minimum_chrome_version": "111",
   "icons": {
     "16": "icons/16.png",
     "32": "icons/32.png",
@@ -37,5 +38,5 @@
     "https://api.dropboxapi.com/*",
     "https://content.dropboxapi.com/*"
   ],
-  "optional_host_permissions": ["https://*/*", "http://*/*"]
+  "optional_host_permissions": ["https://*/*", "http://127.0.0.1/*", "http://localhost/*"]
 }

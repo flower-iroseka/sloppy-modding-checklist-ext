@@ -85,6 +85,14 @@ describe('manifest.json', () => {
     expect(manifest.optional_host_permissions).toContain('https://*/*');
   });
 
+  // `validateConfig` refuses plain http to anything but loopback (Basic auth in the clear),
+  // so the broad `http://*/*` went away with it. Every http form that is still accepted needs
+  // a pattern here, or the permission request would come back empty-handed.
+  it('the only http patterns left are loopback', () => {
+    const http = (manifest.optional_host_permissions ?? []).filter((p) => p.startsWith('http://'));
+    expect(http).toEqual(['http://127.0.0.1/*', 'http://localhost/*']);
+  });
+
   it('the identity permission is there (needed by launchWebAuthFlow)', () => {
     expect(manifest.permissions).toContain('identity');
   });

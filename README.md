@@ -82,7 +82,7 @@ Sync goes two ways. **Upload** writes the local list to the remote; **import** b
 **Only one sync method can be used at a time.** Pick it from the "Sync target" dropdown in Settings:
 
 - **Local sync folder (no signup)** — the default. Install the cloud drive's desktop client first (Dropbox, Nutstore and others all provide one); it mounts a directory in your cloud drive as a local folder on the computer, and you pick that folder in Settings. The extension writes files into the folder and the client handles uploading to the cloud. The client has to be running on the computer, and when things get uploaded is up to it. The browser takes the folder permission back after a while, and Settings will then ask you to click "Re-authorize" once.
-- **WebDAV** — fill in the server address and account details (Nutstore, Nextcloud and others all offer WebDAV). Clicking "Save and test connection" asks the browser for permission to reach that server.
+- **WebDAV** — fill in the server address and account details (Nutstore, Nextcloud and others all offer WebDAV). The address must be https; the only exception is this machine (127.0.0.1, localhost), because over http the username and password go across the network in the clear. Clicking "Save and test connection" asks the browser for permission to reach that server.
 - **Dropbox** — you need to register an application in the Dropbox console yourself (there's a step-by-step guide below).
 
 ### Dropbox registration guide
@@ -159,6 +159,8 @@ https://content.dropboxapi.com/*
 ```
 
 (`https://osu.ppy.sh/*` is for reading the author behind a discussion permalink; the content script itself is injected through the manifest's `content_scripts`. The other three are Dropbox's: the authorization page, the RPC API, and file upload/download.)
+
+The full write-up is in the [privacy policy](PRIVACY.md).
 
 ---
 

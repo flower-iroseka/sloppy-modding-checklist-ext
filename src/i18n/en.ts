@@ -27,7 +27,9 @@ export const en: Catalog = {
 
   // ---------------------------------------------------------------- WebDAV
   'err.webdav.noBaseUrl': 'Please fill in the WebDAV server address.',
-  'err.webdav.badBaseUrl': 'The server address must be a full http(s) URL, for example https://dav.jianguoyun.com/dav/',
+  'err.webdav.badBaseUrl': 'The server address must be a full https URL, for example https://dav.jianguoyun.com/dav/',
+  'err.webdav.insecureBaseUrl':
+    'The server address must use https. Over http the username and password are sent across the network in the clear; addresses on this machine (127.0.0.1, localhost) are exempt.',
   'err.webdav.noUsername': 'Please fill in the username.',
   'err.webdav.noPassword': 'Please fill in the password or app password.',
   'err.webdav.auth': '{action} failed: {host} rejected authentication (HTTP {status}). Check the username and password.',

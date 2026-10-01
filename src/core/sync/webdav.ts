@@ -81,6 +81,25 @@ export function configOriginPattern(cfg: WebDavConfig): string | null {
 }
 
 /**
+ * Whether this is a loopback address.
+ *
+ * Loopback traffic never leaves the machine, so plain http there is a different thing from
+ * plain http to a NAS across the room. It is also what the end-to-end smoke test uses:
+ * `scripts/smoke-m5.mjs` runs a WebDAV server on 127.0.0.1.
+ *
+ * These two are the only forms allowed, because the manifest has to declare a pattern for
+ * each one (`optional_host_permissions`) and there is no pattern that covers an IPv6
+ * literal such as `[::1]`.
+ *
+ * @param hostname the host part of a URL
+ * @returns true for 127.0.0.0/8 and localhost
+ */
+function isLoopbackHost(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+  return host === 'localhost' || host.startsWith('127.');
+}
+
+/**
  * Encode text as base64.
  *
  * @param input the text to encode
@@ -116,7 +135,13 @@ export function authHeader(cfg: WebDavConfig): string {
  */
 export function validateConfig(cfg: WebDavConfig): Msg | null {
   if (!cfg.baseUrl.trim()) return { key: 'err.webdav.noBaseUrl' };
-  if (!configOrigin(cfg)) return { key: 'err.webdav.badBaseUrl' };
+  const origin = configOrigin(cfg);
+  if (!origin) return { key: 'err.webdav.badBaseUrl' };
+  // The request always carries `Authorization: Basic`, so a plain http address would put
+  // the username and password on the wire in the clear. Loopback is exempt.
+  if (origin.startsWith('http:') && !isLoopbackHost(new URL(origin).hostname)) {
+    return { key: 'err.webdav.insecureBaseUrl' };
+  }
   if (!cfg.username.trim()) return { key: 'err.webdav.noUsername' };
   if (!cfg.password) return { key: 'err.webdav.noPassword' };
   return null;

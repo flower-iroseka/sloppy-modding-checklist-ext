@@ -412,11 +412,19 @@ export async function autoPull(reason: 'alarm' | 'start'): Promise<void> {
     const settings = await readSyncSettings();
     if (!settings.autoSync) return;
 
-    if (reason === 'start') {
-      if (!settings.pullOnStart) return;
-      const status = await readSyncStatus();
-      if (status.lastSyncAt && now() - status.lastSyncAt < PULL_ON_START_MIN_GAP_MS) return;
+    if (reason === 'start' && !settings.pullOnStart) return;
+
+    const status = await readSyncStatus();
+    if (reason === 'start' && status.lastSyncAt && now() - status.lastSyncAt < PULL_ON_START_MIN_GAP_MS) {
+      return;
     }
+
+    // A parked conflict is a question waiting for an answer. Pulling on top of it answers the
+    // question on the user's behalf: when the remote is strictly newer the pull goes through,
+    // and `record` then rebuilds the status without `pendingConflict` -- the prompt disappears,
+    // and so do the local edits it was asking about. Same guard as `autoPush`.
+    if (status.pendingConflict) return;
+
     await syncPull();
   } catch {
     // recordError already happened inside syncPull; throwing again here would become an unhandled rejection

@@ -109,6 +109,24 @@ describe('URL joining and validation', () => {
     expect(say({ ...cfg, password: '' })).toMatch(/密码/);
   });
 
+  // Every request carries `Authorization: Basic`, so a plain http address would put the
+  // username and password on the wire in the clear. Loopback is the one exception: that
+  // traffic never leaves the machine, and it is how the smoke test runs a real server.
+  it('refuses plain http, except on loopback', () => {
+    expect(validateConfig(cfg)).toBeNull();
+
+    const msg = validateConfig({ ...cfg, baseUrl: 'http://dav.example.com/dav' });
+    expect(msg, 'http 到别的机器上该被拒').not.toBeNull();
+    expect(renderMsg(msg!, 'zh')).toMatch(/https/);
+
+    expect(validateConfig({ ...cfg, baseUrl: 'http://127.0.0.1:8080/dav' })).toBeNull();
+    expect(validateConfig({ ...cfg, baseUrl: 'http://localhost:8080/dav' })).toBeNull();
+
+    // An IPv6 literal stays refused: the manifest has no pattern that could cover it, so
+    // allowing it here would only move the failure to the permission prompt.
+    expect(validateConfig({ ...cfg, baseUrl: 'http://[::1]:8080/dav' })).not.toBeNull();
+  });
+
   it('a disabled provider does not count as configured', () => {
     const { provider } = fakeFetch([]);
     expect(provider.isConfigured({ ...cfg, enabled: false })).toBe(false);

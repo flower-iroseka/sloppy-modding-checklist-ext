@@ -34,7 +34,9 @@ export const zh = {
   // nothing has even connected to the server yet, so it is not a "failure", it is "not
   // filled in completely".
   'err.webdav.noBaseUrl': '请填写 WebDAV 服务器地址。',
-  'err.webdav.badBaseUrl': '服务器地址要是完整的 http(s) URL，例如 https://dav.jianguoyun.com/dav/',
+  'err.webdav.badBaseUrl': '服务器地址要是完整的 https URL，例如 https://dav.jianguoyun.com/dav/',
+  'err.webdav.insecureBaseUrl':
+    '服务器地址要用 https。用 http 的话，账号和密码会明文发到网络上；本机地址（127.0.0.1、localhost）不受此限。',
   'err.webdav.noUsername': '请填写账号。',
   'err.webdav.noPassword': '请填写密码或应用密码。',
 

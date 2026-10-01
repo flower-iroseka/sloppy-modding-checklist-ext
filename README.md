@@ -2,9 +2,9 @@
 
 **English** | [中文](README.zh.md)
 
-Collects everything that needs checking on a beatmap into one list, on osu!'s beatmap discussion pages.
+Collects what is worth checking on a beatmap into one list, on osu!'s beatmap discussion pages.
 
-Use it before applying for BN to work out what still needs checking on a map. It also works as a general modding checklist.
+Use it before applying for BN to go through what is worth checking on a map. It also works as a general modding checklist.
 
 The list is sorted along two axes:
 
@@ -77,12 +77,12 @@ With "Match browser", only the **primary language** is looked at: `zh-CN`, `zh-T
 
 Data is stored on this machine by default.
 
-Sync goes two ways. **Upload** writes the local list to the remote; **pull** brings the remote list back to this machine. "Remote" here means the file at the sync target you picked. Once sync is enabled and a sync method chosen, the list is stored as a single file named `modding-checklist.json`, and every device syncs the same one.
+Sync goes two ways. **Upload** writes the local list to the remote; **import** brings the remote list back to this machine. "Remote" here means the file at the sync target you picked. Once sync is enabled and a sync method chosen, the list is stored as a single file named `modding-checklist.json`, and every device syncs the same one.
 
 **Only one sync method can be used at a time.** Pick it from the "Sync target" dropdown in Settings:
 
-- **Local sync folder (no signup)** — the default. Install the cloud drive's desktop client first (Dropbox, Nutstore and others all provide one); it mounts a directory in your cloud drive as a local folder on the computer, and you pick that folder in Settings. The extension writes files into the folder and the client handles uploading to the cloud. The cost is that the client has to be running on the computer, and when things get uploaded is up to it. The browser occasionally takes the folder permission back, and Settings will then ask you to click "Re-authorize" once.
-- **WebDAV** — fill in the server address and account details yourself (Nutstore, Nextcloud and others all offer WebDAV). The server address is yours to fill in, and clicking "Save and test connection" asks the browser for permission to reach that server.
+- **Local sync folder (no signup)** — the default. Install the cloud drive's desktop client first (Dropbox, Nutstore and others all provide one); it mounts a directory in your cloud drive as a local folder on the computer, and you pick that folder in Settings. The extension writes files into the folder and the client handles uploading to the cloud. The client has to be running on the computer, and when things get uploaded is up to it. The browser takes the folder permission back after a while, and Settings will then ask you to click "Re-authorize" once.
+- **WebDAV** — fill in the server address and account details (Nutstore, Nextcloud and others all offer WebDAV). Clicking "Save and test connection" asks the browser for permission to reach that server.
 - **Dropbox** — you need to register an application in the Dropbox console yourself (there's a step-by-step guide below).
 
 ### Dropbox registration guide
@@ -110,19 +110,19 @@ When the authorization page errors out, the extension cannot read the error text
 
 ### When sync runs
 
-- **Auto-upload (upload after changes, pull once an hour)**, off by default: once on, every local change is uploaded **30 seconds** later, and a pull runs once an hour.
-- **Pull when the extension opens**, off by default: pulls once when the background service worker starts — on browser start, and on extension install, update or reload. It is skipped if a sync succeeded within the last ten minutes.
+- **Auto-upload (upload after changes, import once an hour)**, off by default: once on, every local change is uploaded **30 seconds** later, and an import runs once an hour.
+- **Import when the extension opens**, off by default: imports once when the background service worker starts — on browser start, and on extension install, update or reload. It is skipped if a sync succeeded within the last ten minutes.
 
 Both switches are in Settings. The second one only takes effect while Auto-upload is on; with Auto-upload off, it does nothing.
 
 ### Handling conflicts
 
-Each copy carries an `updatedAt` timestamp, and that is what the extension compares.
+Each copy carries an `updatedAt` timestamp, and the extension goes by it.
 
-On a **pull** (a pull from Settings, the hourly pull, or a pull when the extension opens):
+On an **import** (a manual import, the hourly import, or an import when the extension opens):
 
 - the remote is newer → the remote copy is taken;
-- the local copy is newer → nothing happens;
+- the local copy is newer → the local copy is kept;
 - the timestamps are equal but the content differs → the conflict strategy decides.
 
 On a **push** ("Upload now", or an automatic upload):
@@ -130,16 +130,16 @@ On a **push** ("Upload now", or an automatic upload):
 - the remote is newer → the extension asks before overwriting, unless the strategy is "Local wins";
 - otherwise → the remote is overwritten with the local copy.
 
-The "Conflict strategy" in Settings decides only the two cases left open above — a pull with equal timestamps, and a push with a newer remote:
+The "Conflict strategy" in Settings decides only the two cases left open above — an import with equal timestamps, and a push with a newer remote:
 
 | Option | Meaning |
 | --- | --- |
-| Newest timestamp wins | Default. On a pull with equal timestamps, take the remote copy |
-| Local wins | On a pull with equal timestamps, keep the local copy; on a push, overwrite a newer remote without asking |
-| Remote wins | On a pull with equal timestamps, take the remote copy |
-| Always ask | On a pull with equal timestamps, ask which side to take |
+| Newest timestamp wins | Default. On an import with equal timestamps, take the remote copy |
+| Local wins | On an import with equal timestamps, keep the local copy; on a push, overwrite a newer remote without asking |
+| Remote wins | On an import with equal timestamps, take the remote copy |
+| Always ask | On an import with equal timestamps, ask which side to take |
 
-When the extension asks, Settings shows a conflict panel. A pull conflict offers three choices: "Keep local", "Take remote" and "Merge both". A push conflict offers two: "Overwrite with local anyway" or "Cancel". **A backup is taken automatically before the remote is overwritten** (the five most recent are kept, for the local copy and the remote separately).
+When the extension asks, Settings shows a conflict panel. An import conflict offers three choices: "Keep local", "Take remote" and "Merge both". A push conflict offers two: "Overwrite with local anyway" or "Cancel". **A backup is taken automatically before the remote is overwritten** (the five most recent are kept, for the local copy and the remote separately).
 
 ---
 
@@ -173,7 +173,7 @@ npm run icons          # regenerate public/icons/* (normally not needed)
 
 `npm run build` runs two builds in order: the pages first (app / popup / background), then the content script.
 
-They are split in two because the content script has two constraints: it has to be a single JS file that the browser executes as a plain script (no `import` inside), and the two stylesheets injected into the shadow root are inlined into that file as strings, because a shadow root cannot load an external stylesheet.
+The build runs in two steps, one for the pages and one for the content script. The content script has to be a single JS file that the browser executes as a plain script (no `import` inside), and the two stylesheets injected into the shadow root are inlined into that file as strings, because a shadow root cannot load an external stylesheet.
 
 Either build can also be run on its own:
 
